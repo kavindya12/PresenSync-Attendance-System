@@ -1,10 +1,10 @@
-
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import Callback from './pages/auth/Callback';
 import StudentDashboard from './pages/StudentDashboard';
 import LecturerDashboard from './pages/LecturerDashboard';
 import AdminDashboard from './pages/AdminDashboard';
@@ -18,21 +18,22 @@ function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/auth/callback" element={<Callback />} />
 
           <Route path="/student/*" element={
-            <ProtectedRoute allowedRoles={['student']}>
+            <ProtectedRoute allowedRoles={['STUDENT']}>
               <StudentDashboard />
             </ProtectedRoute>
           } />
 
           <Route path="/lecturer/*" element={
-            <ProtectedRoute allowedRoles={['lecturer']}>
+            <ProtectedRoute allowedRoles={['LECTURER']}>
               <LecturerDashboard />
             </ProtectedRoute>
           } />
 
           <Route path="/admin/*" element={
-            <ProtectedRoute allowedRoles={['admin']}>
+            <ProtectedRoute allowedRoles={['ADMIN', 'DEPT_HEAD']}>
               <AdminDashboard />
             </ProtectedRoute>
           } />

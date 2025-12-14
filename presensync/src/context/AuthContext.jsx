@@ -1,81 +1,113 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '../lib/supabaseClient';
+import { authAPI } from '../api/endpoints.js';
+import { initializeSocket, disconnectSocket } from '../utils/socket.js';
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
-    const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Check active session
-        const getSession = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            setUser(session?.user ?? null);
-            if (session?.user) {
-                fetchProfile(session.user.id);
-            } else {
-                setLoading(false);
+        // Check for existing token and fetch user
+        const checkAuth = async () => {
+            const token = localStorage.getItem('token');
+            if (token) {
+                try {
+                    const response = await authAPI.getMe();
+                    setUser(response.data.user);
+                    // Initialize socket connection
+                    initializeSocket();
+                } catch (error) {
+                    // Token invalid, clear it
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('refreshToken');
+                    setUser(null);
+                }
             }
+            setLoading(false);
         };
 
-        getSession();
-
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-            setUser(session?.user ?? null);
-            if (session?.user) {
-                await fetchProfile(session.user.id);
-            } else {
-                setProfile(null);
-                setLoading(false);
-            }
-        });
-
-        return () => subscription.unsubscribe();
+        checkAuth();
     }, []);
 
-    const fetchProfile = async (userId) => {
+    const signIn = async (email, password) => {
         try {
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', userId)
-                .single();
-
-            if (error) {
-                console.error('Error fetching profile:', error);
-            } else {
-                setProfile(data);
-            }
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setLoading(false);
+            const response = await authAPI.login({ email, password });
+            const { user, token, refreshToken } = response.data;
+            
+            localStorage.setItem('token', token);
+            localStorage.setItem('refreshToken', refreshToken);
+            setUser(user);
+            
+            // Initialize socket
+            initializeSocket();
+            
+            return { data: { user }, error: null };
+        } catch (error) {
+            return {
+                data: null,
+                error: {
+                    message: error.response?.data?.error || 'Login failed',
+                },
+            };
         }
     };
 
-    const signIn = async (email, password) => {
-        return await supabase.auth.signInWithPassword({ email, password });
-    };
-
     const signUp = async (email, password, metadata) => {
-        return await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-                data: metadata, // { role, full_name, etc. }
-            },
-        });
+        try {
+            const response = await authAPI.register({
+                email,
+                password,
+                ...metadata,
+            });
+            const { user, token, refreshToken } = response.data;
+            
+            localStorage.setItem('token', token);
+            localStorage.setItem('refreshToken', refreshToken);
+            setUser(user);
+            
+            // Initialize socket
+            initializeSocket();
+            
+            return { data: { user }, error: null };
+        } catch (error) {
+            return {
+                data: null,
+                error: {
+                    message: error.response?.data?.error || 'Registration failed',
+                },
+            };
+        }
     };
 
     const signOut = async () => {
-        return await supabase.auth.signOut();
+        try {
+            await authAPI.logout();
+        } catch (error) {
+            console.error('Logout error:', error);
+        } finally {
+            localStorage.removeItem('token');
+            localStorage.removeItem('refreshToken');
+            setUser(null);
+            disconnectSocket();
+        }
+    };
+
+    const updateUser = (userData) => {
+        setUser(userData);
     };
 
     return (
-        <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, signOut }}>
+        <AuthContext.Provider value={{ 
+            user, 
+            profile: user, // For backward compatibility
+            loading, 
+            signIn, 
+            signUp, 
+            signOut,
+            updateUser,
+        }}>
             {!loading && children}
         </AuthContext.Provider>
     );

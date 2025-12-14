@@ -1,0 +1,253 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  STUDENT
+  LECTURER
+  ADMIN
+  DEPT_HEAD
+}
+
+enum AttendanceMethod {
+  QR
+  NFC
+  BEACON
+  FACIAL
+  MANUAL
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum NotificationType {
+  CLASS_REMINDER
+  ATTENDANCE_ALERT
+  LEAVE_APPROVED
+  LEAVE_REJECTED
+  SYSTEM
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  password      String?   // Nullable for OAuth users
+  role          UserRole  @default(STUDENT)
+  fullName      String
+  studentId     String?   @unique // Optional, for students
+  department    String?
+  avatarUrl     String?
+  universityEmail String? // For SSO validation
+  oauthProvider String?   // 'google' or 'microsoft'
+  oauthId       String?   // OAuth provider user ID
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  coursesTaught     Course[]           @relation("CourseLecturer")
+  enrollments       CourseEnrollment[]
+  attendanceRecords AttendanceRecord[]
+  leaveRequests     LeaveRequest[]
+  notifications     Notification[]
+  streaks           AttendanceStreak[]
+  achievements      Achievement[]
+  approvedLeaves    LeaveRequest[]     @relation("ApprovedBy")
+
+  @@index([email])
+  @@index([role])
+  @@index([studentId])
+}
+
+model Course {
+  id          String   @id @default(uuid())
+  code        String
+  name        String
+  semester    String?
+  lecturerId  String
+  department  String?
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  lecturer     User              @relation("CourseLecturer", fields: [lecturerId], references: [id])
+  enrollments  CourseEnrollment[]
+  classes      Class[]
+  streaks      AttendanceStreak[]
+
+  @@index([lecturerId])
+  @@index([code])
+}
+
+model CourseEnrollment {
+  id        String   @id @default(uuid())
+  courseId  String
+  studentId String
+  enrolledAt DateTime @default(now())
+
+  // Relations
+  course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  student User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, studentId])
+  @@index([courseId])
+  @@index([studentId])
+}
+
+model Class {
+  id            String   @id @default(uuid())
+  courseId      String
+  title         String   // e.g., "Lecture 1", "Lab Session 2"
+  room          String?
+  startTime     DateTime
+  endTime       DateTime
+  qrCode        String?  // Generated QR code data
+  qrCodeExpiry  DateTime? // QR code expiry time
+  nfcTagId      String?  // NFC tag identifier
+  beaconId      String?  // Bluetooth beacon ID
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  course            Course            @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  attendanceRecords AttendanceRecord[]
+  leaveRequests     LeaveRequest[]
+  beacon            Beacon?
+
+  @@index([courseId])
+  @@index([startTime])
+}
+
+model AttendanceRecord {
+  id        String           @id @default(uuid())
+  classId   String
+  studentId String
+  method    AttendanceMethod
+  status    AttendanceStatus @default(PRESENT)
+  timestamp DateTime         @default(now())
+  latitude  Float?
+  longitude Float?
+  reason    String?          // For manual override
+  createdAt DateTime         @default(now())
+
+  // Relations
+  class   Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+  student User  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([classId, studentId]) // One attendance record per student per class
+  @@index([classId])
+  @@index([studentId])
+  @@index([timestamp])
+}
+
+model LeaveRequest {
+  id         String      @id @default(uuid())
+  studentId  String
+  classId    String?
+  reason     String
+  startDate  DateTime
+  endDate    DateTime
+  status     LeaveStatus @default(PENDING)
+  approvedBy String?
+  approvedAt DateTime?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  // Relations
+  student    User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  class      Class? @relation(fields: [classId], references: [id], onDelete: SetNull)
+  approver   User?  @relation("ApprovedBy", fields: [approvedBy], references: [id], onDelete: SetNull)
+
+  @@index([studentId])
+  @@index([status])
+}
+
+model Notification {
+  id        String          @id @default(uuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  read      Boolean         @default(false)
+  createdAt DateTime        @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([read])
+}
+
+model Beacon {
+  id        String   @id @default(uuid())
+  classId   String   @unique
+  uuid      String   // Bluetooth beacon UUID
+  major     Int
+  minor     Int
+  location  String?  // Room/location description
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  class Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@index([uuid, major, minor])
+}
+
+model AttendanceStreak {
+  id               String   @id @default(uuid())
+  studentId        String
+  courseId         String
+  currentStreak    Int      @default(0)
+  longestStreak    Int      @default(0)
+  lastAttendanceDate DateTime?
+
+  // Relations
+  student User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, courseId])
+  @@index([studentId])
+}
+
+enum BadgeType {
+  PERFECT_WEEK
+  PERFECT_MONTH
+  STREAK_10
+  STREAK_30
+  EARLY_BIRD
+  CONSISTENT
+}
+
+model Achievement {
+  id        String    @id @default(uuid())
+  studentId String
+  badgeType BadgeType
+  earnedAt  DateTime  @default(now())
+
+  // Relations
+  student User @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, badgeType])
+  @@index([studentId])
+}
+

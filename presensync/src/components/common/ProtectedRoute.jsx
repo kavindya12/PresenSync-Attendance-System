@@ -1,24 +1,27 @@
-
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
-    const { user, profile, loading } = useAuth();
+    const { user, loading } = useAuth();
 
     if (loading) {
-        return <div className="flex justify-center items-center h-screen text-teal-600">Loading...</div>;
+        return (
+            <div className="flex justify-center items-center h-screen">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
+            </div>
+        );
     }
 
     if (!user) {
         return <Navigate to="/login" replace />;
     }
 
-    if (allowedRoles && profile && !allowedRoles.includes(profile.role)) {
+    if (allowedRoles && !allowedRoles.includes(user.role)) {
         // Redirect based on actual role
-        if (profile.role === 'student') return <Navigate to="/student/dashboard" replace />;
-        if (profile.role === 'lecturer') return <Navigate to="/lecturer/dashboard" replace />;
-        if (profile.role === 'admin') return <Navigate to="/admin/dashboard" replace />;
+        if (user.role === 'STUDENT') return <Navigate to="/student" replace />;
+        if (user.role === 'LECTURER') return <Navigate to="/lecturer" replace />;
+        if (user.role === 'ADMIN' || user.role === 'DEPT_HEAD') return <Navigate to="/admin" replace />;
         return <Navigate to="/" replace />;
     }
 

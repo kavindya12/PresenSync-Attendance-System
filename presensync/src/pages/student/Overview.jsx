@@ -1,21 +1,84 @@
-
-import React from 'react';
-import { QrCode, BookOpen, Clock } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { QrCode, BookOpen, Clock, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { courseAPI, attendanceAPI, classAPI } from '../../api/endpoints';
+import { useAuth } from '../../context/AuthContext';
+import { format } from 'date-fns';
 
 const StudentOverview = () => {
+    const { user } = useAuth();
+    const [stats, setStats] = useState({
+        attendancePercentage: 0,
+        enrolledCourses: 0,
+        classesToday: 0,
+    });
+    const [todayClasses, setTodayClasses] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        fetchDashboardData();
+    }, []);
+
+    const fetchDashboardData = async () => {
+        try {
+            setLoading(true);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+
+            // Fetch courses
+            const coursesRes = await courseAPI.getAllCourses();
+            const courses = coursesRes.data.courses || [];
+            setStats(prev => ({ ...prev, enrolledCourses: courses.length }));
+
+            // Fetch today's classes
+            const classesRes = await classAPI.getAllClasses({
+                startDate: today.toISOString(),
+                endDate: tomorrow.toISOString(),
+            });
+            const classes = classesRes.data.classes || [];
+            setStats(prev => ({ ...prev, classesToday: classes.length }));
+            setTodayClasses(classes);
+
+            // Fetch attendance stats
+            if (courses.length > 0) {
+                const statsRes = await attendanceAPI.getAttendanceStats({
+                    startDate: new Date(new Date().getFullYear(), 0, 1).toISOString(),
+                });
+                const statsData = statsRes.data.stats || {};
+                setStats(prev => ({
+                    ...prev,
+                    attendancePercentage: parseFloat(statsData.percentage || 0),
+                }));
+            }
+        } catch (error) {
+            console.error('Error fetching dashboard data:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="flex justify-center items-center h-64">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-6">
             <h2 className="text-2xl font-bold text-gray-800">Dashboard Overview</h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center space-x-4">
                     <div className="bg-teal-100 p-3 rounded-lg text-teal-600">
-                        <QrCode size={24} />
+                        <TrendingUp size={24} />
                     </div>
                     <div>
                         <p className="text-sm text-gray-500">Attendance</p>
-                        <p className="text-2xl font-bold text-gray-800">85%</p>
+                        <p className="text-2xl font-bold text-gray-800">{stats.attendancePercentage.toFixed(1)}%</p>
                     </div>
                 </div>
 
@@ -25,7 +88,7 @@ const StudentOverview = () => {
                     </div>
                     <div>
                         <p className="text-sm text-gray-500">Enrolled Courses</p>
-                        <p className="text-2xl font-bold text-gray-800">6</p>
+                        <p className="text-2xl font-bold text-gray-800">{stats.enrolledCourses}</p>
                     </div>
                 </div>
 
@@ -35,7 +98,22 @@ const StudentOverview = () => {
                     </div>
                     <div>
                         <p className="text-sm text-gray-500">Classes Today</p>
-                        <p className="text-2xl font-bold text-gray-800">2</p>
+                        <p className="text-2xl font-bold text-gray-800">{stats.classesToday}</p>
+                    </div>
+                </div>
+
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center space-x-4">
+                    <div className="bg-purple-100 p-3 rounded-lg text-purple-600">
+                        <QrCode size={24} />
+                    </div>
+                    <div>
+                        <p className="text-sm text-gray-500">Quick Scan</p>
+                        <Link
+                            to="/student/scan"
+                            className="text-teal-600 hover:text-teal-700 font-medium text-sm"
+                        >
+                            Mark Attendance →
+                        </Link>
                     </div>
                 </div>
             </div>
@@ -44,36 +122,57 @@ const StudentOverview = () => {
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                     <h3 className="font-semibold text-lg mb-4">Quick Actions</h3>
                     <div className="space-y-3">
-                        <Link to="/student/scan" className="block w-full text-center py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition">
+                        <Link
+                            to="/student/scan"
+                            className="block w-full text-center py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition"
+                        >
                             Scan Attendance QR
                         </Link>
-                        <button className="block w-full text-center py-3 border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 transition">
-                            View Schedule
-                        </button>
+                        <Link
+                            to="/student/courses"
+                            className="block w-full text-center py-3 border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 transition"
+                        >
+                            View My Courses
+                        </Link>
+                        <Link
+                            to="/student/leaves"
+                            className="block w-full text-center py-3 border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 transition"
+                        >
+                            Leave Requests
+                        </Link>
                     </div>
                 </div>
 
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                     <h3 className="font-semibold text-lg mb-4">Today's Schedule</h3>
                     <div className="space-y-4">
-                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                            <div>
-                                <p className="font-medium">Software Engineering</p>
-                                <p className="text-sm text-gray-500">10:00 AM - 12:00 PM</p>
-                            </div>
-                            <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">Present</span>
-                        </div>
-                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                            <div>
-                                <p className="font-medium">Database Systems</p>
-                                <p className="text-sm text-gray-500">02:00 PM - 04:00 PM</p>
-                            </div>
-                            <span className="px-2 py-1 bg-gray-200 text-gray-700 text-xs rounded-full">Upcoming</span>
-                        </div>
+                        {todayClasses.length > 0 ? (
+                            todayClasses.map((classItem) => (
+                                <div
+                                    key={classItem.id}
+                                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                                >
+                                    <div>
+                                        <p className="font-medium">{classItem.course?.name || 'N/A'}</p>
+                                        <p className="text-sm text-gray-500">
+                                            {format(new Date(classItem.startTime), 'hh:mm a')} -{' '}
+                                            {format(new Date(classItem.endTime), 'hh:mm a')}
+                                        </p>
+                                        <p className="text-xs text-gray-400">{classItem.room || 'Room TBA'}</p>
+                                    </div>
+                                    <span className="px-2 py-1 bg-gray-200 text-gray-700 text-xs rounded-full">
+                                        {new Date(classItem.startTime) > new Date() ? 'Upcoming' : 'In Progress'}
+                                    </span>
+                                </div>
+                            ))
+                        ) : (
+                            <p className="text-gray-500 text-center py-4">No classes scheduled for today</p>
+                        )}
                     </div>
                 </div>
             </div>
         </div>
     );
 };
+
 export default StudentOverview;

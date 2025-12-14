@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
@@ -7,12 +6,30 @@ const Signup = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [fullName, setFullName] = useState('');
-    const [role, setRole] = useState('student');
+    const [role, setRole] = useState('STUDENT');
     const [studentId, setStudentId] = useState('');
+    const [department, setDepartment] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const { signUp } = useAuth();
     const navigate = useNavigate();
+
+    const redirectByRole = (role) => {
+        switch (role) {
+            case 'STUDENT':
+                navigate('/student');
+                break;
+            case 'LECTURER':
+                navigate('/lecturer');
+                break;
+            case 'ADMIN':
+            case 'DEPT_HEAD':
+                navigate('/admin');
+                break;
+            default:
+                navigate('/');
+        }
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -20,16 +37,18 @@ const Signup = () => {
         setLoading(true);
         try {
             const metadata = {
-                full_name: fullName,
-                role: role,
-                ...(role === 'student' && { student_id: studentId })
+                fullName,
+                role,
+                ...(role === 'STUDENT' && studentId && { studentId }),
+                ...(department && { department }),
             };
-            const { error } = await signUp(email, password, metadata);
-            if (error) throw error;
-            alert('Signup successful! Please log in.');
-            navigate('/login');
+            const { error, data } = await signUp(email, password, metadata);
+            if (error) throw new Error(error.message);
+            if (data?.user) {
+                redirectByRole(data.user.role);
+            }
         } catch (err) {
-            setError(err.message);
+            setError(err.message || 'Signup failed');
         } finally {
             setLoading(false);
         }
@@ -79,6 +98,7 @@ const Signup = () => {
                         <input
                             type="password"
                             required
+                            minLength={6}
                             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
@@ -92,23 +112,32 @@ const Signup = () => {
                             value={role}
                             onChange={(e) => setRole(e.target.value)}
                         >
-                            <option value="student">Student</option>
-                            <option value="lecturer">Lecturer</option>
+                            <option value="STUDENT">Student</option>
+                            <option value="LECTURER">Lecturer</option>
                         </select>
                     </div>
 
-                    {role === 'student' && (
+                    {role === 'STUDENT' && (
                         <div>
                             <label className="block text-sm font-medium text-gray-700">Student ID</label>
                             <input
                                 type="text"
-                                required
                                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm"
                                 value={studentId}
                                 onChange={(e) => setStudentId(e.target.value)}
                             />
                         </div>
                     )}
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Department (Optional)</label>
+                        <input
+                            type="text"
+                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm"
+                            value={department}
+                            onChange={(e) => setDepartment(e.target.value)}
+                        />
+                    </div>
 
                     <div>
                         <button
