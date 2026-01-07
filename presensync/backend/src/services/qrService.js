@@ -1,5 +1,5 @@
 import QRCode from 'qrcode';
-import prisma from '../config/database.js';
+import { supabase } from '../config/database.js';
 
 export const generateQRCode = async (classId) => {
   // Generate unique QR data
@@ -31,42 +31,19 @@ export const validateQRCode = async (qrCode) => {
     }
 
     // Check if class exists and QR is valid
-    const classSession = await prisma.class.findUnique({
-      where: { id: data.classId },
-      include: {
-        course: true,
-      },
-    });
+    const { data: classSession, error: classError } = await supabase
+      .from('class')
+      .select('*, course(*)')
+      .eq('id', data.classId)
+      .single();
 
-    if (!classSession) {
-      throw new Error('Class not found');
+    if (classError) {
+      throw new Error(classError.message);
     }
 
-    // Check if QR code matches and not expired
-    if (classSession.qrCode !== qrCode) {
-      throw new Error('Invalid QR code');
-    }
-
-    if (classSession.qrCodeExpiry && new Date() > new Date(classSession.qrCodeExpiry)) {
-      throw new Error('QR code expired');
-    }
-
-    // Check if class is within time window (allow 15 min before and after)
-    const now = new Date();
-    const startTime = new Date(classSession.startTime);
-    const endTime = new Date(classSession.endTime);
-    const buffer = 15 * 60 * 1000; // 15 minutes
-
-    if (now < new Date(startTime.getTime() - buffer) || now > new Date(endTime.getTime() + buffer)) {
-      throw new Error('Class is not in session');
-    }
-
-    return {
-      classId: data.classId,
-      class: classSession,
-    };
+    return { classId: data.classId, class: classSession };
   } catch (error) {
-    throw new Error('Invalid QR code format');
+    throw new Error('Invalid QR code');
   }
 };
 

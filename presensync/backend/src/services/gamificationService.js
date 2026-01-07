@@ -1,29 +1,35 @@
-import prisma from '../config/database.js';
+import { supabase } from '../config/database.js';
 
 export const updateStreak = async (studentId, courseId) => {
-  const streak = await prisma.attendanceStreak.findUnique({
-    where: {
-      studentId_courseId: {
-        studentId,
-        courseId,
-      },
-    },
-  });
+  const { data: streak, error: streakError } = await supabase
+    .from('attendanceStreak')
+    .select('*')
+    .eq('studentId', studentId)
+    .eq('courseId', courseId)
+    .single();
+
+  if (streakError && streakError.code !== 'PGRST116') {
+    throw new Error(streakError.message);
+  }
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
   if (!streak) {
     // Create new streak
-    await prisma.attendanceStreak.create({
-      data: {
+    const { error: createError } = await supabase
+      .from('attendanceStreak')
+      .insert({
         studentId,
         courseId,
         currentStreak: 1,
         longestStreak: 1,
-        lastAttendanceDate: today,
-      },
-    });
+        lastAttendanceDate: today.toISOString(),
+      });
+
+    if (createError) {
+      throw new Error(createError.message);
+    }
     return;
   }
 
@@ -39,27 +45,29 @@ export const updateStreak = async (studentId, courseId) => {
   if (!lastDate || lastDate.getTime() === today.getTime()) {
     // Same day, don't update
     return;
-  } else if (lastDate && lastDate.getTime() === yesterday.getTime()) {
-    // Consecutive day
-    newStreak = streak.currentStreak + 1;
+  } else if (lastDate.getTime() === yesterday.getTime()) {
+    // Increment streak
+    newStreak += 1;
   } else {
-    // Streak broken
+    // Reset streak
     newStreak = 1;
   }
 
-  await prisma.attendanceStreak.update({
-    where: {
-      studentId_courseId: {
-        studentId,
-        courseId,
-      },
-    },
-    data: {
+  const longestStreak = Math.max(newStreak, streak.longestStreak);
+
+  const { error: updateError } = await supabase
+    .from('attendanceStreak')
+    .update({
       currentStreak: newStreak,
-      longestStreak: Math.max(streak.longestStreak, newStreak),
-      lastAttendanceDate: today,
-    },
-  });
+      longestStreak,
+      lastAttendanceDate: today.toISOString(),
+    })
+    .eq('studentId', studentId)
+    .eq('courseId', courseId);
+
+  if (updateError) {
+    throw new Error(updateError.message);
+  }
 };
 
 export const checkAchievements = async (studentId, courseId) => {

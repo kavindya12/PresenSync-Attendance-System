@@ -1,4 +1,4 @@
-import prisma from '../config/database.js';
+import { supabaseClient } from '../config/database.js'; // fixed import
 import { hashPassword, comparePassword } from '../utils/password.js';
 import { generateToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt.js';
 import { body, validationResult } from 'express-validator';
@@ -21,9 +21,15 @@ export const register = async (req, res, next) => {
     const { email, password, fullName, role = 'STUDENT', studentId, department } = req.body;
 
     // Check if user exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
-    });
+    const { data: existingUser, error: existingUserError } = await supabaseClient
+      .from('user')
+      .select('id')
+      .eq('email', email)
+      .single();
+
+    if (existingUserError && existingUserError.code !== 'PGRST116') {
+      return res.status(500).json({ error: existingUserError.message });
+    }
 
     if (existingUser) {
       return res.status(409).json({ error: 'User with this email already exists' });
@@ -33,26 +39,22 @@ export const register = async (req, res, next) => {
     const hashedPassword = await hashPassword(password);
 
     // Create user
-    const user = await prisma.user.create({
-      data: {
+    const { data: user, error: createUserError } = await supabaseClient
+      .from('user')
+      .insert({
         email,
         password: hashedPassword,
         fullName,
         role,
         studentId,
         department,
-      },
-      select: {
-        id: true,
-        email: true,
-        fullName: true,
-        role: true,
-        studentId: true,
-        department: true,
-        avatarUrl: true,
-        createdAt: true,
-      },
-    });
+      })
+      .select('id, email, fullName, role, studentId, department, avatarUrl, createdAt')
+      .single();
+
+    if (createUserError) {
+      return res.status(500).json({ error: createUserError.message });
+    }
 
     // Generate tokens
     const token = generateToken({ userId: user.id, email: user.email, role: user.role });
@@ -78,11 +80,13 @@ export const login = async (req, res, next) => {
     }
 
     // Find user
-    const user = await prisma.user.findUnique({
-      where: { email },
-    });
+    const { data: user, error: userError } = await supabaseClient
+      .from('user')
+      .select('*')
+      .eq('email', email)
+      .single();
 
-    if (!user) {
+    if (userError) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
@@ -90,7 +94,7 @@ export const login = async (req, res, next) => {
       return res.status(403).json({ error: 'Account is deactivated' });
     }
 
-    // Check password (skip if OAuth user)
+    // Check password
     if (user.password) {
       const isValidPassword = await comparePassword(password, user.password);
       if (!isValidPassword) {
@@ -100,13 +104,10 @@ export const login = async (req, res, next) => {
       return res.status(401).json({ error: 'Please use OAuth login for this account' });
     }
 
-    // Generate tokens
     const token = generateToken({ userId: user.id, email: user.email, role: user.role });
     const refreshToken = generateRefreshToken({ userId: user.id });
 
-    // Return user data (excluding password)
-    const { password: _, ...userData } = user;
-
+    const { password: _, ...userData } = user; // exclude password
     res.json({
       message: 'Login successful',
       user: userData,
@@ -115,23 +116,6 @@ export const login = async (req, res, next) => {
     });
   } catch (error) {
     next(error);
-  }
-};
-
-export const oauthCallback = async (req, res) => {
-  try {
-    const user = req.user;
-
-    // Generate tokens
-    const token = generateToken({ userId: user.id, email: user.email, role: user.role });
-    const refreshToken = generateRefreshToken({ userId: user.id });
-
-    // Redirect to frontend with tokens
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    res.redirect(`${frontendUrl}/auth/callback?token=${token}&refreshToken=${refreshToken}`);
-  } catch (error) {
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    res.redirect(`${frontendUrl}/login?error=oauth_failed`);
   }
 };
 
@@ -145,17 +129,17 @@ export const refreshToken = async (req, res, next) => {
 
     const decoded = verifyRefreshToken(refreshToken);
 
-    // Verify user still exists and is active
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
-      select: { id: true, email: true, role: true, isActive: true },
-    });
+    // Verify user
+    const { data: user, error: userError } = await supabaseClient
+      .from('user')
+      .select('id, email, role, isActive')
+      .eq('id', decoded.userId)
+      .single();
 
-    if (!user || !user.isActive) {
+    if (userError || !user.isActive) {
       return res.status(401).json({ error: 'Invalid refresh token' });
     }
 
-    // Generate new tokens
     const newToken = generateToken({ userId: user.id, email: user.email, role: user.role });
     const newRefreshToken = generateRefreshToken({ userId: user.id });
 
@@ -173,8 +157,5 @@ export const getMe = async (req, res) => {
 };
 
 export const logout = async (req, res) => {
-  // In a stateless JWT system, logout is handled client-side
-  // But we can add token blacklisting here if needed
   res.json({ message: 'Logged out successfully' });
 };
-

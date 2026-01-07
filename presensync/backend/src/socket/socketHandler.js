@@ -1,5 +1,5 @@
 import { verifyToken } from '../utils/jwt.js';
-import prisma from '../config/database.js';
+import { prisma } from '../config/database.js';
 
 let ioInstance = null;
 
@@ -9,7 +9,9 @@ export const initializeSocket = (io) => {
   // Authentication middleware
   io.use(async (socket, next) => {
     try {
-      const token = socket.handshake.auth.token || socket.handshake.headers.authorization?.split(' ')[1];
+      const token =
+        socket.handshake.auth.token ||
+        socket.handshake.headers.authorization?.split(' ')[1];
 
       if (!token) {
         return next(new Error('Authentication error'));
@@ -23,6 +25,7 @@ export const initializeSocket = (io) => {
           email: true,
           role: true,
           fullName: true,
+          isActive: true,
         },
       });
 
@@ -43,7 +46,7 @@ export const initializeSocket = (io) => {
     // Join user-specific room
     socket.join(`user:${socket.user.id}`);
 
-    // Join role-based rooms
+    // Role-based rooms
     if (socket.user.role === 'LECTURER' || socket.user.role === 'ADMIN') {
       socket.join('lecturers');
     }
@@ -51,18 +54,16 @@ export const initializeSocket = (io) => {
       socket.join('admins');
     }
 
-    // Join class room when requested
+    // Class rooms
     socket.on('join:class', (classId) => {
       socket.join(`class:${classId}`);
       console.log(`User ${socket.user.email} joined class:${classId}`);
     });
 
-    // Leave class room
     socket.on('leave:class', (classId) => {
       socket.leave(`class:${classId}`);
     });
 
-    // Handle disconnect
     socket.on('disconnect', () => {
       console.log(`User disconnected: ${socket.user.email}`);
     });
@@ -71,9 +72,6 @@ export const initializeSocket = (io) => {
   return io;
 };
 
-// Export io instance for use in controllers
+// Export io instance
 export const getIO = () => ioInstance;
-
-// Export io for backward compatibility
 export { ioInstance as io };
-

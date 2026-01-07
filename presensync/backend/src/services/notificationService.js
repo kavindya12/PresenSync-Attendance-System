@@ -1,4 +1,4 @@
-import prisma from '../config/database.js';
+import { supabase } from '../config/database.js';
 import nodemailer from 'nodemailer';
 import twilio from 'twilio';
 
@@ -20,10 +20,16 @@ const twilioClient = process.env.TWILIO_ACCOUNT_SID
 
 export const sendEmailNotification = async (userId, subject, message) => {
   try {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { email: true, fullName: true },
-    });
+    const { data: user, error: userError } = await supabase
+      .from('user')
+      .select('email, fullName')
+      .eq('id', userId)
+      .single();
+
+    if (userError) {
+      console.error('Error fetching user:', userError.message);
+      return;
+    }
 
     if (!user || !user.email) {
       return;

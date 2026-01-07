@@ -102,11 +102,13 @@ Frontend will run on `http://localhost:5173`
 
 ### PostgreSQL Installation
 
-1. Install PostgreSQL from https://www.postgresql.org/download/
+1. Install PostgreSQL from [PostgreSQL Downloads](https://www.postgresql.org/download/)
 2. Create a new database:
+
    ```sql
    CREATE DATABASE presensync;
    ```
+
 3. Update `DATABASE_URL` in `backend/.env` with your credentials
 
 ### Alternative: Use Docker
@@ -121,7 +123,7 @@ Then use: `DATABASE_URL="postgresql://postgres:password@localhost:5432/presensyn
 
 ### Google OAuth
 
-1. Go to https://console.cloud.google.com/
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Create a new project
 3. Enable Google+ API
 4. Create OAuth 2.0 credentials
@@ -130,7 +132,7 @@ Then use: `DATABASE_URL="postgresql://postgres:password@localhost:5432/presensyn
 
 ### Microsoft OAuth
 
-1. Go to https://portal.azure.com/
+1. Go to [Microsoft Azure Portal](https://portal.azure.com/)
 2. Register a new application
 3. Add redirect URI: `http://localhost:5000/api/auth/microsoft/callback`
 4. Copy Application (client) ID and Secret to `.env`
@@ -138,15 +140,18 @@ Then use: `DATABASE_URL="postgresql://postgres:password@localhost:5432/presensyn
 ## Troubleshooting
 
 ### Database Connection Error
+
 - Check PostgreSQL is running
 - Verify DATABASE_URL is correct
 - Ensure database exists
 
 ### Port Already in Use
+
 - Change PORT in backend/.env
 - Update FRONTEND_URL if backend port changes
 
 ### CORS Errors
+
 - Ensure FRONTEND_URL in backend/.env matches your frontend URL
 - Check both servers are running
 

@@ -1,13 +1,8 @@
 import { PrismaClient } from '@prisma/client';
+import { supabaseClient } from './supabaseClient.js';
 
-const prisma = new PrismaClient({
-  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-});
+// Initialize Prisma
+export const prisma = new PrismaClient();
 
-// Handle graceful shutdown
-process.on('beforeExit', async () => {
-  await prisma.$disconnect();
-});
-
-export default prisma;
-
+// Re-export Supabase
+export { supabaseClient };

@@ -85,6 +85,4 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
 
--- STORAGE BUCKETS (You need to create these in dashboard usually, but here is policy idea)
--- insert into storage.buckets (id, name) values ('avatars', 'avatars');
--- insert into storage.buckets (id, name) values ('qrcodes', 'qrcodes');
+
