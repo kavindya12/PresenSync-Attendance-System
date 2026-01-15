@@ -1,20 +1,25 @@
-import { verifyToken } from '../utils/jwt.js';
-import prisma from '../config/database.js';
+import { prisma, supabaseClient } from '../config/database.js';
 
 export const authenticate = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({ error: 'No token provided' });
     }
 
     const token = authHeader.substring(7);
-    const decoded = verifyToken(token);
 
-    // Fetch user from database
+    // Verify token with Supabase
+    const { data: { user: authUser }, error } = await supabaseClient.auth.getUser(token);
+
+    if (error || !authUser) {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+
+    // Fetch profile from database using Prisma (direct access)
     const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
+      where: { id: authUser.id },
       select: {
         id: true,
         email: true,
@@ -34,7 +39,8 @@ export const authenticate = async (req, res, next) => {
     req.user = user;
     next();
   } catch (error) {
-    return res.status(401).json({ error: 'Invalid or expired token' });
+    console.error('Auth error:', error);
+    return res.status(401).json({ error: 'Authentication failed' });
   }
 };
 

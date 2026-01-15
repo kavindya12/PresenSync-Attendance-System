@@ -5,4 +5,6 @@ import { supabaseClient } from './supabaseClient.js';
 export const prisma = new PrismaClient();
 
 // Re-export Supabase
-export { supabaseClient };
+export { supabaseClient, supabaseClient as supabase };
+
+export default prisma;

@@ -17,11 +17,14 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
         return <Navigate to="/login" replace />;
     }
 
-    if (allowedRoles && !allowedRoles.includes(user.role)) {
+    const userRole = user.role?.toLowerCase();
+    const normalizedAllowedRoles = allowedRoles?.map(r => r.toLowerCase());
+
+    if (normalizedAllowedRoles && !normalizedAllowedRoles.includes(userRole)) {
         // Redirect based on actual role
-        if (user.role === 'STUDENT') return <Navigate to="/student" replace />;
-        if (user.role === 'LECTURER') return <Navigate to="/lecturer" replace />;
-        if (user.role === 'ADMIN' || user.role === 'DEPT_HEAD') return <Navigate to="/admin" replace />;
+        if (userRole === 'student') return <Navigate to="/student" replace />;
+        if (userRole === 'lecturer') return <Navigate to="/lecturer" replace />;
+        if (userRole === 'admin' || userRole === 'dept_head') return <Navigate to="/admin" replace />;
         return <Navigate to="/" replace />;
     }
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 
@@ -6,30 +6,38 @@ const Signup = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [fullName, setFullName] = useState('');
-    const [role, setRole] = useState('STUDENT');
+    const [role, setRole] = useState('student');
     const [studentId, setStudentId] = useState('');
     const [department, setDepartment] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
-    const { signUp } = useAuth();
+    const { signUp, user } = useAuth();
     const navigate = useNavigate();
 
     const redirectByRole = (role) => {
-        switch (role) {
-            case 'STUDENT':
+        const standardRole = role?.toLowerCase();
+        switch (standardRole) {
+            case 'student':
                 navigate('/student');
                 break;
-            case 'LECTURER':
+            case 'lecturer':
                 navigate('/lecturer');
                 break;
-            case 'ADMIN':
-            case 'DEPT_HEAD':
+            case 'admin':
+            case 'dept_head':
                 navigate('/admin');
                 break;
             default:
                 navigate('/');
         }
     };
+
+    // Redirect after successful signup when user profile is loaded
+    useEffect(() => {
+        if (user && user.role && !loading) {
+            redirectByRole(user.role);
+        }
+    }, [user, loading]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -38,18 +46,16 @@ const Signup = () => {
         try {
             const metadata = {
                 fullName,
-                role,
-                ...(role === 'STUDENT' && studentId && { studentId }),
+                role: role.toLowerCase(),
+                ...(role === 'student' && studentId && { studentId }),
                 ...(department && { department }),
             };
-            const { error, data } = await signUp(email, password, metadata);
+            const { error } = await signUp(email, password, metadata);
             if (error) throw new Error(error.message);
-            if (data?.user) {
-                redirectByRole(data.user.role);
-            }
+            // User profile will be loaded by AuthContext's onAuthStateChange
+            // The useEffect above will handle redirect when user is loaded
         } catch (err) {
             setError(err.message || 'Signup failed');
-        } finally {
             setLoading(false);
         }
     };
@@ -112,12 +118,12 @@ const Signup = () => {
                             value={role}
                             onChange={(e) => setRole(e.target.value)}
                         >
-                            <option value="STUDENT">Student</option>
-                            <option value="LECTURER">Lecturer</option>
+                            <option value="student">Student</option>
+                            <option value="lecturer">Lecturer</option>
                         </select>
                     </div>
 
-                    {role === 'STUDENT' && (
+                    {role === 'student' && (
                         <div>
                             <label className="block text-sm font-medium text-gray-700">Student ID</label>
                             <input

@@ -1,4 +1,4 @@
-import { supabase } from '../config/database.js';
+import { prisma } from '../config/database.js';
 import { validateQRCode } from './qrService.js';
 import { updateStreak, checkAchievements } from './gamificationService.js';
 
@@ -6,32 +6,28 @@ export const markAttendanceByQR = async (qrCode, studentId) => {
   const { classId, class: classSession } = await validateQRCode(qrCode);
 
   // Check if already marked
-  const { data: existing, error: existingError } = await supabase
-    .from('attendanceRecord')
-    .select('*')
-    .eq('classId', classId)
-    .eq('studentId', studentId)
-    .single();
-
-  if (existingError && existingError.code !== 'PGRST116') {
-    throw new Error(existingError.message);
-  }
+  const existing = await prisma.attendanceRecord.findUnique({
+    where: {
+      classId_studentId: {
+        classId,
+        studentId,
+      },
+    },
+  });
 
   if (existing) {
     throw new Error('Attendance already marked for this class');
   }
 
   // Check if student is enrolled
-  const { data: enrollment, error: enrollmentError } = await supabase
-    .from('courseEnrollment')
-    .select('*')
-    .eq('courseId', classSession.courseId)
-    .eq('studentId', studentId)
-    .single();
-
-  if (enrollmentError && enrollmentError.code !== 'PGRST116') {
-    throw new Error(enrollmentError.message);
-  }
+  const enrollment = await prisma.courseEnrollment.findUnique({
+    where: {
+      courseId_studentId: {
+        courseId: classSession.courseId,
+        studentId,
+      },
+    },
+  });
 
   if (!enrollment) {
     throw new Error('Not enrolled in this course');
@@ -44,87 +40,79 @@ export const markAttendanceByQR = async (qrCode, studentId) => {
   const status = now > lateThreshold ? 'LATE' : 'PRESENT';
 
   // Insert attendance record
-  const { error: insertError } = await supabase
-    .from('attendanceRecord')
-    .insert({
+  const record = await prisma.attendanceRecord.create({
+    data: {
       classId,
       studentId,
       status,
-      timestamp: now.toISOString(),
-    });
-
-  if (insertError) {
-    throw new Error(insertError.message);
-  }
+      method: 'QR',
+      timestamp: now,
+    },
+  });
 
   // Update streak and check achievements
-  await updateStreak(studentId, status);
+  await updateStreak(studentId, classSession.courseId);
   await checkAchievements(studentId);
+
+  return record;
 };
 
 export const markAttendanceByNFC = async (nfcTagId, studentId) => {
   // Find class by NFC tag
-  const { data: classSession, error } = await supabase
-    .from('class')
-    .select('*')
-    .eq('nfcTagId', nfcTagId)
-    .lte('startTime', new Date())
-    .gte('endTime', new Date())
-    .single();
+  const now = new Date();
+  const classSession = await prisma.class.findFirst({
+    where: {
+      nfcTagId,
+      startTime: { lte: now },
+      endTime: { gte: now },
+    },
+  });
 
-  if (error) {
+  if (!classSession) {
     throw new Error('No active class found for this NFC tag');
   }
 
   // Check if already marked
-  const { data: existing, error: existingError } = await supabase
-    .from('attendanceRecord')
-    .select('*')
-    .eq('classId', classSession.id)
-    .eq('studentId', studentId)
-    .single();
-
-  if (existingError && existingError.code !== 'PGRST116') {
-    throw new Error(existingError.message);
-  }
+  const existing = await prisma.attendanceRecord.findUnique({
+    where: {
+      classId_studentId: {
+        classId: classSession.id,
+        studentId,
+      },
+    },
+  });
 
   if (existing) {
     throw new Error('Attendance already marked');
   }
 
   // Check enrollment
-  const { data: enrollment, error: enrollmentError } = await supabase
-    .from('courseEnrollment')
-    .select('*')
-    .eq('courseId', classSession.courseId)
-    .eq('studentId', studentId)
-    .single();
-
-  if (enrollmentError && enrollmentError.code !== 'PGRST116') {
-    throw new Error(enrollmentError.message);
-  }
+  const enrollment = await prisma.courseEnrollment.findUnique({
+    where: {
+      courseId_studentId: {
+        courseId: classSession.courseId,
+        studentId,
+      },
+    },
+  });
 
   if (!enrollment) {
     throw new Error('Not enrolled in this course');
   }
 
-  const now = new Date();
   const startTime = new Date(classSession.startTime);
   const lateThreshold = new Date(startTime.getTime() + 10 * 60 * 1000);
   const status = now > lateThreshold ? 'LATE' : 'PRESENT';
 
-  const { error: insertError } = await supabase
-    .from('attendanceRecord')
-    .insert({
+  const record = await prisma.attendanceRecord.create({
+    data: {
       classId: classSession.id,
       studentId,
       status,
-      timestamp: now.toISOString(),
-    });
-
-  if (insertError) {
-    throw new Error(insertError.message);
-  }
+      method: 'NFC',
+      timestamp: now,
+    },
+  });
 
   await updateStreak(studentId, classSession.courseId);
   await checkAchievements(studentId, classSession.courseId);
@@ -134,13 +122,12 @@ export const markAttendanceByNFC = async (nfcTagId, studentId) => {
 
 export const markAttendanceByBeacon = async (beaconId, studentId, location) => {
   // Find beacon
-  const { data: beacon, error } = await supabase
-    .from('beacon')
-    .select('*')
-    .eq('id', beaconId)
-    .single();
+  const beacon = await prisma.beacon.findUnique({
+    where: { id: beaconId },
+    include: { class: true },
+  });
 
-  if (error || !beacon.isActive) {
+  if (!beacon || !beacon.isActive) {
     throw new Error('Beacon not found or inactive');
   }
 
@@ -153,32 +140,28 @@ export const markAttendanceByBeacon = async (beaconId, studentId, location) => {
   }
 
   // Check if already marked
-  const { data: existing, error: existingError } = await supabase
-    .from('attendanceRecord')
-    .select('*')
-    .eq('classId', classSession.id)
-    .eq('studentId', studentId)
-    .single();
-
-  if (existingError && existingError.code !== 'PGRST116') {
-    throw new Error(existingError.message);
-  }
+  const existing = await prisma.attendanceRecord.findUnique({
+    where: {
+      classId_studentId: {
+        classId: classSession.id,
+        studentId,
+      },
+    },
+  });
 
   if (existing) {
     throw new Error('Attendance already marked');
   }
 
   // Check enrollment
-  const { data: enrollment, error: enrollmentError } = await supabase
-    .from('courseEnrollment')
-    .select('*')
-    .eq('courseId', classSession.courseId)
-    .eq('studentId', studentId)
-    .single();
-
-  if (enrollmentError && enrollmentError.code !== 'PGRST116') {
-    throw new Error(enrollmentError.message);
-  }
+  const enrollment = await prisma.courseEnrollment.findUnique({
+    where: {
+      courseId_studentId: {
+        courseId: classSession.courseId,
+        studentId,
+      },
+    },
+  });
 
   if (!enrollment) {
     throw new Error('Not enrolled in this course');
@@ -188,20 +171,17 @@ export const markAttendanceByBeacon = async (beaconId, studentId, location) => {
   const lateThreshold = new Date(startTime.getTime() + 10 * 60 * 1000);
   const status = now > lateThreshold ? 'LATE' : 'PRESENT';
 
-  const { error: insertError } = await supabase
-    .from('attendanceRecord')
-    .insert({
+  const record = await prisma.attendanceRecord.create({
+    data: {
       classId: classSession.id,
       studentId,
       status,
+      method: 'BEACON',
       latitude: location?.latitude,
       longitude: location?.longitude,
-      timestamp: now.toISOString(),
-    });
-
-  if (insertError) {
-    throw new Error(insertError.message);
-  }
+      timestamp: now,
+    },
+  });
 
   await updateStreak(studentId, classSession.courseId);
   await checkAchievements(studentId, classSession.courseId);
@@ -211,54 +191,45 @@ export const markAttendanceByBeacon = async (beaconId, studentId, location) => {
 
 export const markAttendanceByFacial = async (imageData, studentId) => {
   // This is a simplified version - in production, you'd use AWS Rekognition or DeepFace
-  // For now, we'll require classId to be passed in the imageData
   const { classId, image } = imageData;
 
   if (!classId) {
     throw new Error('Class ID required for facial recognition');
   }
 
-  const { data: classSession, error } = await supabase
-    .from('class')
-    .select('*')
-    .eq('id', classId)
-    .single();
+  const classSession = await prisma.class.findUnique({
+    where: { id: classId },
+  });
 
-  if (error) {
+  if (!classSession) {
     throw new Error('Class not found');
   }
 
-  // TODO: Implement actual facial recognition
-  // For now, we'll just verify the student and mark attendance
-  // In production: Compare image with stored student photos using AWS Rekognition
+  // TODO: Implement actual facial recognition compare logic here
 
   // Check if already marked
-  const { data: existing, error: existingError } = await supabase
-    .from('attendanceRecord')
-    .select('*')
-    .eq('classId', classId)
-    .eq('studentId', studentId)
-    .single();
-
-  if (existingError && existingError.code !== 'PGRST116') {
-    throw new Error(existingError.message);
-  }
+  const existing = await prisma.attendanceRecord.findUnique({
+    where: {
+      classId_studentId: {
+        classId,
+        studentId,
+      },
+    },
+  });
 
   if (existing) {
     throw new Error('Attendance already marked');
   }
 
   // Check enrollment
-  const { data: enrollment, error: enrollmentError } = await supabase
-    .from('courseEnrollment')
-    .select('*')
-    .eq('courseId', classSession.courseId)
-    .eq('studentId', studentId)
-    .single();
-
-  if (enrollmentError && enrollmentError.code !== 'PGRST116') {
-    throw new Error(enrollmentError.message);
-  }
+  const enrollment = await prisma.courseEnrollment.findUnique({
+    where: {
+      courseId_studentId: {
+        courseId: classSession.courseId,
+        studentId,
+      },
+    },
+  });
 
   if (!enrollment) {
     throw new Error('Not enrolled in this course');
@@ -269,18 +240,15 @@ export const markAttendanceByFacial = async (imageData, studentId) => {
   const lateThreshold = new Date(startTime.getTime() + 10 * 60 * 1000);
   const status = now > lateThreshold ? 'LATE' : 'PRESENT';
 
-  const { error: insertError } = await supabase
-    .from('attendanceRecord')
-    .insert({
+  const record = await prisma.attendanceRecord.create({
+    data: {
       classId,
       studentId,
       status,
-      timestamp: now.toISOString(),
-    });
-
-  if (insertError) {
-    throw new Error(insertError.message);
-  }
+      method: 'FACIAL',
+      timestamp: now,
+    },
+  });
 
   await updateStreak(studentId, classSession.courseId);
   await checkAchievements(studentId, classSession.courseId);
@@ -289,59 +257,48 @@ export const markAttendanceByFacial = async (imageData, studentId) => {
 };
 
 export const markAttendanceManually = async (classId, studentId, reason) => {
-  const { data: classSession, error } = await supabase
-    .from('class')
-    .select('*')
-    .eq('id', classId)
-    .single();
+  const classSession = await prisma.class.findUnique({
+    where: { id: classId },
+  });
 
-  if (error) {
+  if (!classSession) {
     throw new Error('Class not found');
   }
 
   // Check if already marked
-  const { data: existing, error: existingError } = await supabase
-    .from('attendanceRecord')
-    .select('*')
-    .eq('classId', classId)
-    .eq('studentId', studentId)
-    .single();
-
-  if (existingError && existingError.code !== 'PGRST116') {
-    throw new Error(existingError.message);
-  }
+  const existing = await prisma.attendanceRecord.findUnique({
+    where: {
+      classId_studentId: {
+        classId,
+        studentId,
+      },
+    },
+  });
 
   if (existing) {
     // Update existing record
-    const { error: updateError } = await supabase
-      .from('attendanceRecord')
-      .update({
+    const updated = await prisma.attendanceRecord.update({
+      where: { id: existing.id },
+      data: {
         method: 'MANUAL',
         status: 'PRESENT',
         reason,
-      })
-      .eq('id', existing.id);
+      },
+    });
 
-    if (updateError) {
-      throw new Error(updateError.message);
-    }
-
-    return existing;
+    return updated;
   }
 
-  const { error: insertError } = await supabase
-    .from('attendanceRecord')
-    .insert({
+  const record = await prisma.attendanceRecord.create({
+    data: {
       classId,
       studentId,
       method: 'MANUAL',
       status: 'PRESENT',
       reason,
-    });
-
-  if (insertError) {
-    throw new Error(insertError.message);
-  }
+      timestamp: new Date(),
+    },
+  });
 
   await updateStreak(studentId, classSession.courseId);
   await checkAchievements(studentId, classSession.courseId);

@@ -1,4 +1,4 @@
-import { supabaseClient } from '../config/database.js'; // fixed import
+import { prisma, supabaseClient } from '../config/database.js';
 import { hashPassword, comparePassword } from '../utils/password.js';
 import { generateToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt.js';
 import { body, validationResult } from 'express-validator';
@@ -79,14 +79,12 @@ export const login = async (req, res, next) => {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    // Find user
-    const { data: user, error: userError } = await supabaseClient
-      .from('user')
-      .select('*')
-      .eq('email', email)
-      .single();
+    // Find user using Prisma
+    const user = await prisma.user.findUnique({
+      where: { email },
+    });
 
-    if (userError) {
+    if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
@@ -129,14 +127,12 @@ export const refreshToken = async (req, res, next) => {
 
     const decoded = verifyRefreshToken(refreshToken);
 
-    // Verify user
-    const { data: user, error: userError } = await supabaseClient
-      .from('user')
-      .select('id, email, role, isActive')
-      .eq('id', decoded.userId)
-      .single();
+    // Verify user using Prisma
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+    });
 
-    if (userError || !user.isActive) {
+    if (!user || !user.isActive) {
       return res.status(401).json({ error: 'Invalid refresh token' });
     }
 
@@ -149,6 +145,25 @@ export const refreshToken = async (req, res, next) => {
     });
   } catch (error) {
     next(error);
+  }
+};
+
+export const oauthCallback = async (req, res) => {
+  try {
+    // req.user is populated by passport
+    const token = generateToken({
+      userId: req.user.id,
+      email: req.user.email,
+      role: req.user.role
+    });
+    const refreshToken = generateRefreshToken({ userId: req.user.id });
+
+    // Redirect to frontend with tokens
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    res.redirect(`${frontendUrl}/oauth-callback?token=${token}&refreshToken=${refreshToken}`);
+  } catch (error) {
+    console.error('OAuth callback error:', error);
+    res.redirect(`${process.env.FRONTEND_URL}/login?error=oauth_failed`);
   }
 };
 

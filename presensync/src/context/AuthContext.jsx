@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { authAPI } from '../api/endpoints.js';
+import { supabase } from '../lib/supabaseClient';
 import { initializeSocket, disconnectSocket } from '../utils/socket.js';
 
 const AuthContext = createContext();
@@ -9,46 +9,62 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Check for existing token and fetch user
-        const checkAuth = async () => {
-            const token = localStorage.getItem('token');
-            if (token) {
-                try {
-                    const response = await authAPI.getMe();
-                    setUser(response.data.user);
-                    // Initialize socket connection
-                    initializeSocket();
-                } catch (error) {
-                    // Token invalid, clear it
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('refreshToken');
-                    setUser(null);
-                }
+        // Check for existing session
+        const getSession = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user) {
+                // Fetch profile data from our public.profiles table
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', session.user.id)
+                    .single();
+
+                setUser({ ...session.user, ...profile });
+                initializeSocket();
             }
             setLoading(false);
         };
 
-        checkAuth();
+        getSession();
+
+        // Listen for auth changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            if (session?.user) {
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', session.user.id)
+                    .single();
+
+                setUser({ ...session.user, ...profile });
+                initializeSocket();
+            } else {
+                setUser(null);
+                disconnectSocket();
+            }
+            setLoading(false);
+        });
+
+        return () => subscription.unsubscribe();
     }, []);
 
     const signIn = async (email, password) => {
         try {
-            const response = await authAPI.login({ email, password });
-            const { user, token, refreshToken } = response.data;
-            
-            localStorage.setItem('token', token);
-            localStorage.setItem('refreshToken', refreshToken);
-            setUser(user);
-            
-            // Initialize socket
-            initializeSocket();
-            
-            return { data: { user }, error: null };
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email,
+                password,
+            });
+
+            if (error) throw error;
+
+            // User and session handled by onAuthStateChange listener
+            return { data, error: null };
         } catch (error) {
             return {
                 data: null,
                 error: {
-                    message: error.response?.data?.error || 'Login failed',
+                    message: error.message || 'Login failed',
                 },
             };
         }
@@ -56,26 +72,25 @@ export const AuthProvider = ({ children }) => {
 
     const signUp = async (email, password, metadata) => {
         try {
-            const response = await authAPI.register({
+            const { data, error } = await supabase.auth.signUp({
                 email,
                 password,
-                ...metadata,
+                options: {
+                    data: {
+                        full_name: metadata.fullName,
+                        role: metadata.role || 'student',
+                    }
+                }
             });
-            const { user, token, refreshToken } = response.data;
-            
-            localStorage.setItem('token', token);
-            localStorage.setItem('refreshToken', refreshToken);
-            setUser(user);
-            
-            // Initialize socket
-            initializeSocket();
-            
-            return { data: { user }, error: null };
+
+            if (error) throw error;
+
+            return { data, error: null };
         } catch (error) {
             return {
                 data: null,
                 error: {
-                    message: error.response?.data?.error || 'Registration failed',
+                    message: error.message || 'Registration failed',
                 },
             };
         }
@@ -83,14 +98,9 @@ export const AuthProvider = ({ children }) => {
 
     const signOut = async () => {
         try {
-            await authAPI.logout();
+            await supabase.auth.signOut();
         } catch (error) {
             console.error('Logout error:', error);
-        } finally {
-            localStorage.removeItem('token');
-            localStorage.removeItem('refreshToken');
-            setUser(null);
-            disconnectSocket();
         }
     };
 
@@ -99,12 +109,12 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ 
-            user, 
+        <AuthContext.Provider value={{
+            user,
             profile: user, // For backward compatibility
-            loading, 
-            signIn, 
-            signUp, 
+            loading,
+            signIn,
+            signUp,
             signOut,
             updateUser,
         }}>

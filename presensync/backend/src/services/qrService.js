@@ -1,5 +1,5 @@
 import QRCode from 'qrcode';
-import { supabase } from '../config/database.js';
+import { prisma } from '../config/database.js';
 
 export const generateQRCode = async (classId) => {
   // Generate unique QR data
@@ -31,14 +31,13 @@ export const validateQRCode = async (qrCode) => {
     }
 
     // Check if class exists and QR is valid
-    const { data: classSession, error: classError } = await supabase
-      .from('class')
-      .select('*, course(*)')
-      .eq('id', data.classId)
-      .single();
+    const classSession = await prisma.class.findUnique({
+      where: { id: data.classId },
+      include: { course: true },
+    });
 
-    if (classError) {
-      throw new Error(classError.message);
+    if (!classSession) {
+      throw new Error('Class not found');
     }
 
     return { classId: data.classId, class: classSession };

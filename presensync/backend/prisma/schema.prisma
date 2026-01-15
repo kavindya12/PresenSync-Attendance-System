@@ -50,16 +50,16 @@ model User {
   email         String    @unique
   password      String?   // Nullable for OAuth users
   role          UserRole  @default(STUDENT)
-  fullName      String
-  studentId     String?   @unique // Optional, for students
+  fullName      String    @map("full_name")
+  studentId     String?   @unique @map("student_id") // Optional, for students
   department    String?
-  avatarUrl     String?
-  universityEmail String? // For SSO validation
-  oauthProvider String?   // 'google' or 'microsoft'
-  oauthId       String?   // OAuth provider user ID
-  isActive      Boolean   @default(true)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  avatarUrl     String?   @map("avatar_url")
+  universityEmail String? @map("university_email")
+  oauthProvider String?   @map("oauth_provider")
+  oauthId       String?   @map("oauth_id")
+  isActive      Boolean   @default(true) @map("is_active")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
 
   // Relations
   coursesTaught     Course[]           @relation("CourseLecturer")
@@ -71,6 +71,7 @@ model User {
   achievements      Achievement[]
   approvedLeaves    LeaveRequest[]     @relation("ApprovedBy")
 
+  @@map("profiles")
   @@index([email])
   @@index([role])
   @@index([studentId])
@@ -81,11 +82,11 @@ model Course {
   code        String
   name        String
   semester    String?
-  lecturerId  String
+  lecturerId  String   @map("lecturer_id")
   department  String?
   description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   // Relations
   lecturer     User              @relation("CourseLecturer", fields: [lecturerId], references: [id])
@@ -93,38 +94,40 @@ model Course {
   classes      Class[]
   streaks      AttendanceStreak[]
 
+  @@map("courses")
   @@index([lecturerId])
   @@index([code])
 }
 
 model CourseEnrollment {
-  id        String   @id @default(uuid())
-  courseId  String
-  studentId String
-  enrolledAt DateTime @default(now())
+  id         String   @id @default(uuid())
+  courseId   String   @map("course_id")
+  studentId  String   @map("student_id")
+  enrolledAt DateTime @default(now()) @map("enrolled_at")
 
   // Relations
   course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
   student User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@unique([courseId, studentId])
+  @@map("course_enrollments")
   @@index([courseId])
   @@index([studentId])
 }
 
 model Class {
   id            String   @id @default(uuid())
-  courseId      String
+  courseId      String   @map("course_id")
   title         String   // e.g., "Lecture 1", "Lab Session 2"
   room          String?
-  startTime     DateTime
-  endTime       DateTime
-  qrCode        String?  // Generated QR code data
-  qrCodeExpiry  DateTime? // QR code expiry time
-  nfcTagId      String?  // NFC tag identifier
-  beaconId      String?  // Bluetooth beacon ID
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  startTime     DateTime @map("start_time")
+  endTime       DateTime @map("end_time")
+  qrCode        String?  @map("qr_code_content") // Adjusted to match SQL
+  qrCodeExpiry  DateTime? @map("qr_code_expiry")
+  nfcTagId      String?  @map("nfc_tag_id")
+  beaconId      String?  @map("beacon_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
   // Relations
   course            Course            @relation(fields: [courseId], references: [id], onDelete: Cascade)
@@ -132,27 +135,29 @@ model Class {
   leaveRequests     LeaveRequest[]
   beacon            Beacon?
 
+  @@map("classes")
   @@index([courseId])
   @@index([startTime])
 }
 
 model AttendanceRecord {
   id        String           @id @default(uuid())
-  classId   String
-  studentId String
-  method    AttendanceMethod
-  status    AttendanceStatus @default(PRESENT)
-  timestamp DateTime         @default(now())
+  classId   String           @map("class_id")
+  studentId String           @map("student_id")
+  method    AttendanceMethod? @default(QR) // Match check constraints if needed
+  status    AttendanceStatus? @default(PRESENT)
+  timestamp DateTime         @default(now()) @map("timestamp")
   latitude  Float?
   longitude Float?
   reason    String?          // For manual override
-  createdAt DateTime         @default(now())
+  createdAt DateTime         @default(now()) @map("created_at")
 
   // Relations
   class   Class @relation(fields: [classId], references: [id], onDelete: Cascade)
   student User  @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
-  @@unique([classId, studentId]) // One attendance record per student per class
+  @@unique([classId, studentId])
+  @@map("attendance_records")
   @@index([classId])
   @@index([studentId])
   @@index([timestamp])
@@ -160,22 +165,23 @@ model AttendanceRecord {
 
 model LeaveRequest {
   id         String      @id @default(uuid())
-  studentId  String
-  classId    String?
+  studentId  String      @map("student_id")
+  classId    String?     @map("class_id")
   reason     String
-  startDate  DateTime
-  endDate    DateTime
+  startDate  DateTime    @map("start_date")
+  endDate    DateTime    @map("end_date")
   status     LeaveStatus @default(PENDING)
-  approvedBy String?
-  approvedAt DateTime?
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
+  approvedBy String?     @map("approved_by")
+  approvedAt DateTime?   @map("approved_at")
+  createdAt  DateTime    @default(now()) @map("created_at")
+  updatedAt  DateTime    @updatedAt @map("updated_at")
 
   // Relations
   student    User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
   class      Class? @relation(fields: [classId], references: [id], onDelete: SetNull)
   approver   User?  @relation("ApprovedBy", fields: [approvedBy], references: [id], onDelete: SetNull)
 
+  @@map("leaves")
   @@index([studentId])
   @@index([status])
 }
