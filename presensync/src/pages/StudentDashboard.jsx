@@ -61,11 +61,11 @@ const StudentDashboard = () => {
                 <div className="p-4 border-t border-gray-100 dark:border-gray-700">
                     <div className="flex items-center space-x-3 mb-4 px-4">
                         <div className="w-8 h-8 rounded-full bg-teal-100 dark:bg-teal-900 flex items-center justify-center text-teal-700 dark:text-teal-400 font-bold">
-                            {profile?.fullName?.charAt(0) || user?.fullName?.charAt(0) || 'U'}
+                            {user?.fullName?.charAt(0) || 'U'}
                         </div>
                         <div className="overflow-hidden">
-                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{profile?.fullName || user?.fullName || 'User'}</p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{profile?.email || user?.email || ''}</p>
+                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{user?.fullName || 'User'}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.email || ''}</p>
                         </div>
                     </div>
                     <button

@@ -34,10 +34,19 @@ const Signup = () => {
 
     // Redirect after successful signup when user profile is loaded
     useEffect(() => {
-        if (user && user.role && !loading) {
-            redirectByRole(user.role);
+        if (user && user.role) {
+            const currentPath = window.location.pathname;
+            // Only redirect if we're on signup page
+            if (currentPath === '/signup') {
+                // Small delay to ensure user state is fully set
+                const timer = setTimeout(() => {
+                    console.log('Redirecting user with role:', user.role);
+                    redirectByRole(user.role);
+                }, 100);
+                return () => clearTimeout(timer);
+            }
         }
-    }, [user, loading]);
+    }, [user]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -61,74 +70,75 @@ const Signup = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-md w-full space-y-8 p-8 bg-white shadow-xl rounded-2xl border border-gray-100">
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-md w-full space-y-8 p-8 bg-white dark:bg-gray-800 shadow-xl rounded-2xl border border-gray-100 dark:border-gray-700">
                 <div>
-                    <h2 className="mt-6 text-center text-3xl font-extrabold text-teal-800">
+                    <h2 className="mt-6 text-center text-3xl font-extrabold text-teal-800 dark:text-teal-400">
                         Create Account
                     </h2>
-                    <p className="mt-2 text-center text-sm text-gray-600">
+                    <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
                         Or{' '}
-                        <Link to="/login" className="font-medium text-teal-600 hover:text-teal-500">
+                        <Link to="/login" className="font-medium text-teal-600 dark:text-teal-400 hover:text-teal-500 dark:hover:text-teal-300">
                             sign in to existing account
                         </Link>
                     </p>
                 </div>
                 <form className="mt-8 space-y-4" onSubmit={handleSubmit}>
-                    {error && <div className="bg-red-50 text-red-500 p-3 rounded">{error}</div>}
+                    {error && <div className="bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400 p-3 rounded">{error}</div>}
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">Full Name</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Full Name</label>
                         <input
                             type="text"
                             required
-                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm"
+                            className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm"
                             value={fullName}
                             onChange={(e) => setFullName(e.target.value)}
                         />
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">Email</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
                         <input
                             type="email"
                             required
-                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm"
+                            className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                         />
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">Password</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
                         <input
                             type="password"
                             required
                             minLength={6}
-                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm"
+                            className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                         />
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">Role</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Role</label>
                         <select
-                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm"
+                            className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm"
                             value={role}
                             onChange={(e) => setRole(e.target.value)}
                         >
                             <option value="student">Student</option>
                             <option value="lecturer">Lecturer</option>
+                            <option value="admin">Admin</option>
                         </select>
                     </div>
 
                     {role === 'student' && (
                         <div>
-                            <label className="block text-sm font-medium text-gray-700">Student ID</label>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Student ID</label>
                             <input
                                 type="text"
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm"
+                                className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm"
                                 value={studentId}
                                 onChange={(e) => setStudentId(e.target.value)}
                             />
@@ -136,10 +146,10 @@ const Signup = () => {
                     )}
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">Department (Optional)</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Department (Optional)</label>
                         <input
                             type="text"
-                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm"
+                            className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm"
                             value={department}
                             onChange={(e) => setDepartment(e.target.value)}
                         />

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Routes, Route, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { LayoutDashboard, Users, BookOpen, BarChart2, Settings, LogOut } from 'lucide-react';
+import ThemeToggle from '../components/common/ThemeToggle';
 import { userAPI, courseAPI, attendanceAPI } from '../api/endpoints';
 
 const AdminDashboard = () => {
@@ -55,12 +56,17 @@ const AdminDashboard = () => {
     ];
 
     return (
-        <div className="min-h-screen bg-gray-50 flex">
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex">
             {/* Sidebar */}
-            <aside className="w-64 bg-white border-r border-gray-200 hidden md:flex flex-col fixed h-full z-10">
+            <aside className="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 hidden md:flex flex-col fixed h-full z-10">
                 <div className="p-6">
-                    <h1 className="text-2xl font-bold text-teal-700">Presen<span className="text-orange-500">Sync</span></h1>
-                    <p className="text-xs text-gray-500 mt-1 uppercase tracking-wider text-red-600">Admin Portal</p>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h1 className="text-2xl font-bold text-teal-700 dark:text-teal-400">Presen<span className="text-orange-500 dark:text-orange-400">Sync</span></h1>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 uppercase tracking-wider text-red-600 dark:text-red-400">Admin Portal</p>
+                        </div>
+                        <ThemeToggle />
+                    </div>
                 </div>
 
                 <nav className="flex-1 px-4 space-y-1">
@@ -72,8 +78,8 @@ const AdminDashboard = () => {
                             className={({ isActive }) =>
                                 `flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
                                     isActive
-                                        ? 'bg-red-50 text-red-700 font-medium'
-                                        : 'text-gray-600 hover:bg-gray-100'
+                                        ? 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 font-medium'
+                                        : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                                 }`
                             }
                         >
@@ -83,19 +89,19 @@ const AdminDashboard = () => {
                     ))}
                 </nav>
 
-                <div className="p-4 border-t border-gray-100">
+                <div className="p-4 border-t border-gray-100 dark:border-gray-700">
                     <div className="flex items-center space-x-3 mb-4 px-4">
-                        <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-red-700 font-bold">
+                        <div className="w-8 h-8 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center text-red-700 dark:text-red-400 font-bold">
                             {user?.fullName?.charAt(0) || 'A'}
                         </div>
                         <div className="overflow-hidden">
-                            <p className="text-sm font-medium text-gray-900 truncate">{user?.fullName || 'Admin'}</p>
-                            <p className="text-xs text-gray-500 truncate">{user?.email || ''}</p>
+                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{user?.fullName || 'Admin'}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.email || ''}</p>
                         </div>
                     </div>
                     <button
                         onClick={handleSignOut}
-                        className="w-full flex items-center space-x-3 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+                        className="w-full flex items-center space-x-3 px-4 py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition"
                     >
                         <LogOut size={20} />
                         <span>Sign Out</span>
@@ -104,79 +110,79 @@ const AdminDashboard = () => {
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 md:ml-64 p-4 md:p-8 pt-20 md:pt-8 bg-gray-50">
+            <main className="flex-1 md:ml-64 p-4 md:p-8 pt-20 md:pt-8 bg-gray-50 dark:bg-gray-900">
                 <Routes>
                     <Route
                         path="/"
                         element={
                             <div className="space-y-6">
-                                <h2 className="text-2xl font-bold text-gray-800">Admin Dashboard</h2>
+                                <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Admin Dashboard</h2>
                                 {loading ? (
                                     <div className="flex justify-center items-center h-64">
                                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
                                     </div>
                                 ) : (
                                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                                        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                                            <p className="text-sm text-gray-500">Total Users</p>
-                                            <p className="text-3xl font-bold text-gray-800 mt-1">{stats.totalUsers}</p>
+                                        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                                            <p className="text-sm text-gray-500 dark:text-gray-400">Total Users</p>
+                                            <p className="text-3xl font-bold text-gray-800 dark:text-gray-100 mt-1">{stats.totalUsers}</p>
                                         </div>
-                                        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                                            <p className="text-sm text-gray-500">Total Courses</p>
-                                            <p className="text-3xl font-bold text-gray-800 mt-1">{stats.totalCourses}</p>
+                                        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                                            <p className="text-sm text-gray-500 dark:text-gray-400">Total Courses</p>
+                                            <p className="text-3xl font-bold text-gray-800 dark:text-gray-100 mt-1">{stats.totalCourses}</p>
                                         </div>
-                                        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                                            <p className="text-sm text-gray-500">Total Classes</p>
-                                            <p className="text-3xl font-bold text-gray-800 mt-1">{stats.totalClasses}</p>
+                                        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                                            <p className="text-sm text-gray-500 dark:text-gray-400">Total Classes</p>
+                                            <p className="text-3xl font-bold text-gray-800 dark:text-gray-100 mt-1">{stats.totalClasses}</p>
                                         </div>
-                                        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                                            <p className="text-sm text-gray-500">System Attendance Rate</p>
-                                            <p className="text-3xl font-bold text-gray-800 mt-1">
+                                        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                                            <p className="text-sm text-gray-500 dark:text-gray-400">System Attendance Rate</p>
+                                            <p className="text-3xl font-bold text-gray-800 dark:text-gray-100 mt-1">
                                                 {stats.attendanceRate.toFixed(1)}%
                                             </p>
                                         </div>
                                     </div>
                                 )}
-                                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                                    <h3 className="font-semibold text-lg mb-4">Quick Actions</h3>
+                                <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                                    <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100 mb-4">Quick Actions</h3>
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                         <NavLink
                                             to="/admin/users"
-                                            className="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 text-center"
+                                            className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 text-center"
                                         >
-                                            <Users className="mx-auto mb-2 text-gray-600" size={24} />
-                                            <p className="text-sm font-medium">Manage Users</p>
+                                            <Users className="mx-auto mb-2 text-gray-600 dark:text-gray-400" size={24} />
+                                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Manage Users</p>
                                         </NavLink>
                                         <NavLink
                                             to="/admin/courses"
-                                            className="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 text-center"
+                                            className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 text-center"
                                         >
-                                            <BookOpen className="mx-auto mb-2 text-gray-600" size={24} />
-                                            <p className="text-sm font-medium">Manage Courses</p>
+                                            <BookOpen className="mx-auto mb-2 text-gray-600 dark:text-gray-400" size={24} />
+                                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Manage Courses</p>
                                         </NavLink>
                                         <NavLink
                                             to="/admin/reports"
-                                            className="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 text-center"
+                                            className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 text-center"
                                         >
-                                            <BarChart2 className="mx-auto mb-2 text-gray-600" size={24} />
-                                            <p className="text-sm font-medium">View Reports</p>
+                                            <BarChart2 className="mx-auto mb-2 text-gray-600 dark:text-gray-400" size={24} />
+                                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">View Reports</p>
                                         </NavLink>
                                         <NavLink
                                             to="/admin/settings"
-                                            className="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 text-center"
+                                            className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 text-center"
                                         >
-                                            <Settings className="mx-auto mb-2 text-gray-600" size={24} />
-                                            <p className="text-sm font-medium">Settings</p>
+                                            <Settings className="mx-auto mb-2 text-gray-600 dark:text-gray-400" size={24} />
+                                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Settings</p>
                                         </NavLink>
                                     </div>
                                 </div>
                             </div>
                         }
                     />
-                    <Route path="/users" element={<div className="text-center py-20 text-gray-500">User Management Coming Soon</div>} />
-                    <Route path="/courses" element={<div className="text-center py-20 text-gray-500">Course Management Coming Soon</div>} />
-                    <Route path="/reports" element={<div className="text-center py-20 text-gray-500">Reports Coming Soon</div>} />
-                    <Route path="/settings" element={<div className="text-center py-20 text-gray-500">Settings Coming Soon</div>} />
+                    <Route path="/users" element={<div className="text-center py-20 text-gray-500 dark:text-gray-400">User Management Coming Soon</div>} />
+                    <Route path="/courses" element={<div className="text-center py-20 text-gray-500 dark:text-gray-400">Course Management Coming Soon</div>} />
+                    <Route path="/reports" element={<div className="text-center py-20 text-gray-500 dark:text-gray-400">Reports Coming Soon</div>} />
+                    <Route path="/settings" element={<div className="text-center py-20 text-gray-500 dark:text-gray-400">Settings Coming Soon</div>} />
                 </Routes>
             </main>
         </div>

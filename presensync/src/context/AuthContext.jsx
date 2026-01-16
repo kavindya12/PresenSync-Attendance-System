@@ -11,19 +11,60 @@ export const AuthProvider = ({ children }) => {
     useEffect(() => {
         // Check for existing session
         const getSession = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session?.user) {
-                // Fetch profile data from our public.profiles table
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('*')
-                    .eq('id', session.user.id)
-                    .single();
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session?.user) {
+                    try {
+                        // Try to fetch profile
+                        const { data: profile, error: profileError } = await supabase
+                            .from('profiles')
+                            .select('*')
+                            .eq('id', session.user.id)
+                            .single();
 
-                setUser({ ...session.user, ...profile });
-                initializeSocket();
+                        if (profileError || !profile) {
+                            // If profile doesn't exist, use session metadata as fallback
+                            const role = session.user.user_metadata?.role || 'student';
+                            setUser({ 
+                                ...session.user, 
+                                role: role.toLowerCase(),
+                                full_name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0],
+                            });
+                        } else {
+                            // Ensure role is always lowercase and exists
+                            const userRole = profile.role ? profile.role.toLowerCase() : (session.user.user_metadata?.role || 'student').toLowerCase();
+                            setUser({ 
+                                ...session.user, 
+                                ...profile, 
+                                role: userRole 
+                            });
+                        }
+                        try {
+                            initializeSocket();
+                        } catch (socketError) {
+                            console.warn('Socket init failed (non-critical):', socketError);
+                        }
+                    } catch (error) {
+                        // Fallback to session data if profile fetch fails
+                        console.warn('Profile fetch failed, using session metadata:', error);
+                        const role = session.user.user_metadata?.role || 'student';
+                        setUser({ 
+                            ...session.user, 
+                            role: role.toLowerCase(),
+                            full_name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0],
+                        });
+                        try {
+                            initializeSocket();
+                        } catch (socketError) {
+                            console.warn('Socket init failed (non-critical):', socketError);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Session check failed:', error);
+            } finally {
+                setLoading(false);
             }
-            setLoading(false);
         };
 
         getSession();
@@ -31,14 +72,51 @@ export const AuthProvider = ({ children }) => {
         // Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             if (session?.user) {
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('*')
-                    .eq('id', session.user.id)
-                    .single();
+                try {
+                    // Try to fetch profile
+                    const { data: profile, error: profileError } = await supabase
+                        .from('profiles')
+                        .select('*')
+                        .eq('id', session.user.id)
+                        .single();
 
-                setUser({ ...session.user, ...profile });
-                initializeSocket();
+                    if (profileError || !profile) {
+                        // If profile doesn't exist, use session metadata as fallback
+                        const role = session.user.user_metadata?.role || 'student';
+                        setUser({ 
+                            ...session.user, 
+                            role: role.toLowerCase(),
+                            full_name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0],
+                        });
+                    } else {
+                        // Ensure role is always lowercase and exists
+                        const userRole = profile.role ? profile.role.toLowerCase() : (session.user.user_metadata?.role || 'student').toLowerCase();
+                        setUser({ 
+                            ...session.user, 
+                            ...profile, 
+                            role: userRole 
+                        });
+                    }
+                    try {
+                        initializeSocket();
+                    } catch (socketError) {
+                        console.warn('Socket init failed (non-critical):', socketError);
+                    }
+                } catch (error) {
+                        // Fallback to session data if profile fetch fails
+                        console.warn('Profile fetch failed, using session metadata:', error);
+                        const role = session.user.user_metadata?.role || 'student';
+                        setUser({ 
+                            ...session.user, 
+                            role: role.toLowerCase(),
+                            full_name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0],
+                        });
+                        try {
+                            initializeSocket();
+                        } catch (socketError) {
+                            console.warn('Socket init failed (non-critical):', socketError);
+                        }
+                    }
             } else {
                 setUser(null);
                 disconnectSocket();
@@ -118,7 +196,7 @@ export const AuthProvider = ({ children }) => {
             signOut,
             updateUser,
         }}>
-            {!loading && children}
+            {children}
         </AuthContext.Provider>
     );
 };

@@ -1,5 +1,38 @@
-node_modules
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+
+# Environment variables (NEVER commit these!)
 .env
-dist
-.vite
+.env.local
+.env.*.local
+*.env
+
+# Build outputs
+dist/
+build/
+.vite/
+
+# IDE
 .DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Secrets and credentials
+*.key
+*.pem
+*.p12
+secrets/
+credentials/

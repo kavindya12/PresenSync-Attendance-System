@@ -2,8 +2,8 @@
 create extension if not exists "uuid-ossp";
 
 -- 1. PROFILES (Linked to auth.users)
-create table public.profiles (
-  id uuid references auth.users not null primary key,
+create table if not exists public.profiles (
+  id uuid NOT NULL PRIMARY KEY REFERENCES auth.users(id),
   email text unique,
   role text check (role in ('student', 'lecturer', 'admin')) default 'student',
   full_name text,
@@ -16,10 +16,12 @@ create table public.profiles (
 -- Enable RLS on profiles
 alter table public.profiles enable row level security;
 
--- Policies for Profiles
+-- Policies for Profiles (drop if exists, then create)
+drop policy if exists "Users can view own profile" on public.profiles;
 create policy "Users can view own profile" on public.profiles 
   for select using (auth.uid() = id);
 
+drop policy if exists "Staff can view student profiles" on public.profiles;
 create policy "Staff can view student profiles" on public.profiles 
   for select using (
     exists (
@@ -29,11 +31,12 @@ create policy "Staff can view student profiles" on public.profiles
     )
   );
 
+drop policy if exists "Users can update own profile" on public.profiles;
 create policy "Users can update own profile" on public.profiles 
   for update using (auth.uid() = id);
 
 -- 2. COURSES
-create table public.courses (
+create table if not exists public.courses (
   id uuid default uuid_generate_v4() primary key,
   code text not null,
   name text not null,
@@ -47,20 +50,24 @@ create table public.courses (
 alter table public.courses enable row level security;
 
 -- Policies for Courses (Fixed: Split into individual statements)
+drop policy if exists "View courses" on public.courses;
 create policy "View courses" on public.courses 
   for select using (true);
 
+drop policy if exists "Lecturers update own courses" on public.courses;
 create policy "Lecturers update own courses" on public.courses 
   for update using (auth.uid() = lecturer_id);
 
+drop policy if exists "Lecturers delete own courses" on public.courses;
 create policy "Lecturers delete own courses" on public.courses 
   for delete using (auth.uid() = lecturer_id);
 
+drop policy if exists "Lecturers create courses" on public.courses;
 create policy "Lecturers create courses" on public.courses 
   for insert with check (auth.uid() = lecturer_id);
 
 -- 3. COURSE ENROLLMENTS
-create table public.course_enrollments (
+create table if not exists public.course_enrollments (
   id uuid default uuid_generate_v4() primary key,
   course_id uuid references public.courses(id) on delete cascade,
   student_id uuid references public.profiles(id) on delete cascade,
@@ -72,9 +79,11 @@ create table public.course_enrollments (
 alter table public.course_enrollments enable row level security;
 
 -- Policies for Enrollments
+drop policy if exists "Students can see their own enrollments" on public.course_enrollments;
 create policy "Students can see their own enrollments" on public.course_enrollments 
   for select using (auth.uid() = student_id);
 
+drop policy if exists "Lecturers can see student enrollments in their courses" on public.course_enrollments;
 create policy "Lecturers can see student enrollments in their courses" on public.course_enrollments
   for select using (
     exists (
@@ -85,7 +94,7 @@ create policy "Lecturers can see student enrollments in their courses" on public
   );
 
 -- 4. CLASSES
-create table public.classes (
+create table if not exists public.classes (
   id uuid default uuid_generate_v4() primary key,
   course_id uuid references public.courses(id) on delete cascade,
   title text not null,
@@ -100,19 +109,21 @@ create table public.classes (
 alter table public.classes enable row level security;
 
 -- Policies for Classes
+drop policy if exists "Classes are viewable by students in course and lecturer" on public.classes;
 create policy "Classes are viewable by students in course and lecturer" on public.classes 
   for select using (
     exists (select 1 from public.course_enrollments where course_id = classes.course_id and student_id = auth.uid())
     or exists (select 1 from public.courses where id = classes.course_id and lecturer_id = auth.uid())
   );
 
+drop policy if exists "Lecturers can manage classes for their courses" on public.classes;
 create policy "Lecturers can manage classes for their courses" on public.classes 
   for all using (
     exists (select 1 from public.courses where id = course_id and lecturer_id = auth.uid())
   );
 
 -- 5. ATTENDANCE RECORDS (No direct student insert)
-create table public.attendance_records (
+create table if not exists public.attendance_records (
   id uuid default uuid_generate_v4() primary key,
   class_id uuid references public.classes(id) on delete cascade,
   student_id uuid references public.profiles(id) on delete cascade,
@@ -126,9 +137,11 @@ create table public.attendance_records (
 alter table public.attendance_records enable row level security;
 
 -- Policies for Attendance
+drop policy if exists "Students can view own attendance" on public.attendance_records;
 create policy "Students can view own attendance" on public.attendance_records 
   for select using (auth.uid() = student_id);
 
+drop policy if exists "Lecturers can manage attendance for their classes" on public.attendance_records;
 create policy "Lecturers can manage attendance for their classes" on public.attendance_records 
   for all using (
     exists (
@@ -139,7 +152,7 @@ create policy "Lecturers can manage attendance for their classes" on public.atte
   );
 
 -- 6. LEAVES
-create table public.leaves (
+create table if not exists public.leaves (
   id uuid default uuid_generate_v4() primary key,
   student_id uuid references public.profiles(id) on delete cascade,
   start_date date not null,
@@ -153,12 +166,15 @@ create table public.leaves (
 alter table public.leaves enable row level security;
 
 -- Policies for Leaves
+drop policy if exists "Students view own leaves" on public.leaves;
 create policy "Students view own leaves" on public.leaves 
   for select using (auth.uid() = student_id);
 
+drop policy if exists "Students create leaves" on public.leaves;
 create policy "Students create leaves" on public.leaves 
   for insert with check (auth.uid() = student_id);
 
+drop policy if exists "Staff view all leaves" on public.leaves;
 create policy "Staff view all leaves" on public.leaves 
   for select using (
     exists (
@@ -168,6 +184,7 @@ create policy "Staff view all leaves" on public.leaves
     )
   );
 
+drop policy if exists "Staff update leave status" on public.leaves;
 create policy "Staff update leave status" on public.leaves 
   for update using (
     exists (
@@ -192,6 +209,8 @@ begin
 end;
 $$ language plpgsql security definer;
 
+-- Drop trigger if exists, then create
+drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();

@@ -2,9 +2,40 @@ import cron from 'node-cron';
 import prisma from '../config/database.js';
 import * as notificationService from './notificationService.js';
 
+// Helper function to check database connection
+let dbConnectionChecked = false;
+let dbAvailable = false;
+
+async function checkDatabaseConnection() {
+  if (dbConnectionChecked) return dbAvailable;
+  
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    dbAvailable = true;
+    dbConnectionChecked = true;
+    return true;
+  } catch (error) {
+    dbAvailable = false;
+    dbConnectionChecked = true;
+    // Only log once to avoid spam
+    if (!process.env.DB_ERROR_LOGGED) {
+      console.warn('⚠️  Database not available. Scheduler will skip database operations.');
+      console.warn('   Configure your DATABASE_URL in .env to enable scheduled tasks.');
+      process.env.DB_ERROR_LOGGED = 'true';
+    }
+    return false;
+  }
+}
+
 // Schedule class reminders (runs every minute)
 cron.schedule('* * * * *', async () => {
   try {
+    // Check if database is available first
+    const isDbAvailable = await checkDatabaseConnection();
+    if (!isDbAvailable) {
+      return; // Silently skip if database is not available
+    }
+
     // Find classes starting in 30 minutes
     const now = new Date();
     const reminderTime = new Date(now.getTime() + 30 * 60 * 1000);
@@ -50,13 +81,22 @@ cron.schedule('* * * * *', async () => {
       }
     }
   } catch (error) {
-    console.error('Error in class reminder scheduler:', error);
+    // Only log non-connection errors to avoid spam
+    if (!error.message?.includes('Can\'t reach database server')) {
+      console.error('Error in class reminder scheduler:', error.message);
+    }
   }
 });
 
 // Check attendance thresholds daily (runs at 9 AM)
 cron.schedule('0 9 * * *', async () => {
   try {
+    // Check if database is available first
+    const isDbAvailable = await checkDatabaseConnection();
+    if (!isDbAvailable) {
+      return; // Silently skip if database is not available
+    }
+
     const courses = await prisma.course.findMany({
       select: { id: true },
     });
@@ -65,7 +105,10 @@ cron.schedule('0 9 * * *', async () => {
       await notificationService.checkAttendanceThreshold(course.id, 75);
     }
   } catch (error) {
-    console.error('Error in attendance threshold checker:', error);
+    // Only log non-connection errors to avoid spam
+    if (!error.message?.includes('Can\'t reach database server')) {
+      console.error('Error in attendance threshold checker:', error.message);
+    }
   }
 });
 

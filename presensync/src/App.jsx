@@ -21,19 +21,19 @@ function App() {
           <Route path="/auth/callback" element={<Callback />} />
 
           <Route path="/student/*" element={
-            <ProtectedRoute allowedRoles={['STUDENT']}>
+            <ProtectedRoute allowedRoles={['student']}>
               <StudentDashboard />
             </ProtectedRoute>
           } />
 
           <Route path="/lecturer/*" element={
-            <ProtectedRoute allowedRoles={['LECTURER']}>
+            <ProtectedRoute allowedRoles={['lecturer']}>
               <LecturerDashboard />
             </ProtectedRoute>
           } />
 
           <Route path="/admin/*" element={
-            <ProtectedRoute allowedRoles={['ADMIN', 'DEPT_HEAD']}>
+            <ProtectedRoute allowedRoles={['admin', 'dept_head']}>
               <AdminDashboard />
             </ProtectedRoute>
           } />

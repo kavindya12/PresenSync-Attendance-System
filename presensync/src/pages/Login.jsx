@@ -33,11 +33,19 @@ const Login = () => {
 
     // Redirect after successful login when user profile is loaded
     useEffect(() => {
-        if (user && user.role && !loading && !searchParams.get('token')) {
-            // Only redirect if we're on the login page and user is authenticated
-            redirectByRole(user.role);
+        if (user && user.role) {
+            const currentPath = window.location.pathname;
+            // Only redirect if we're on login or landing page and not already redirecting
+            if ((currentPath === '/login' || currentPath === '/') && !searchParams.get('token')) {
+                // Small delay to ensure user state is fully set
+                const timer = setTimeout(() => {
+                    console.log('Redirecting user with role:', user.role);
+                    redirectByRole(user.role);
+                }, 100);
+                return () => clearTimeout(timer);
+            }
         }
-    }, [user, loading, searchParams]);
+    }, [user, searchParams]);
 
     const redirectByRole = (role) => {
         const standardRole = role?.toLowerCase();
@@ -62,10 +70,12 @@ const Login = () => {
         setError('');
         setLoading(true);
         try {
-            const { error } = await signIn(email, password);
+            const { error, data } = await signIn(email, password);
             if (error) throw new Error(error.message);
-            // User profile will be loaded by AuthContext's onAuthStateChange
-            // The useEffect above will handle redirect when user is loaded
+            
+            // Don't set loading to false - AuthContext will manage it
+            // The onAuthStateChange listener will set the user with role
+            // Then the useEffect will handle the redirect
         } catch (err) {
             setError(err.message || 'Login failed');
             setLoading(false);
@@ -81,27 +91,27 @@ const Login = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-md w-full space-y-8 p-8 bg-white shadow-xl rounded-2xl border border-gray-100">
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-md w-full space-y-8 p-8 bg-white dark:bg-gray-800 shadow-xl rounded-2xl border border-gray-100 dark:border-gray-700">
                 <div>
-                    <h2 className="mt-6 text-center text-3xl font-extrabold text-teal-800">
+                    <h2 className="mt-6 text-center text-3xl font-extrabold text-teal-800 dark:text-teal-400">
                         Sign in to PresenSync
                     </h2>
-                    <p className="mt-2 text-center text-sm text-gray-600">
+                    <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
                         Or{' '}
-                        <Link to="/signup" className="font-medium text-teal-600 hover:text-teal-500">
+                        <Link to="/signup" className="font-medium text-teal-600 dark:text-teal-400 hover:text-teal-500 dark:hover:text-teal-300">
                             create a new account
                         </Link>
                     </p>
                 </div>
                 <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-                    {error && <div className="bg-red-50 text-red-500 p-3 rounded">{error}</div>}
+                    {error && <div className="bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400 p-3 rounded">{error}</div>}
                     <div className="rounded-md shadow-sm -space-y-px">
                         <div>
                             <input
                                 type="email"
                                 required
-                                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-teal-500 focus:border-teal-500 focus:z-10 sm:text-sm"
+                                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700 rounded-t-md focus:outline-none focus:ring-teal-500 focus:border-teal-500 focus:z-10 sm:text-sm"
                                 placeholder="Email address"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
@@ -111,7 +121,7 @@ const Login = () => {
                             <input
                                 type="password"
                                 required
-                                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-teal-500 focus:border-teal-500 focus:z-10 sm:text-sm"
+                                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700 rounded-b-md focus:outline-none focus:ring-teal-500 focus:border-teal-500 focus:z-10 sm:text-sm"
                                 placeholder="Password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
@@ -131,10 +141,10 @@ const Login = () => {
 
                     <div className="relative">
                         <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t border-gray-300" />
+                            <div className="w-full border-t border-gray-300 dark:border-gray-600" />
                         </div>
                         <div className="relative flex justify-center text-sm">
-                            <span className="px-2 bg-white text-gray-500">Or continue with</span>
+                            <span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">Or continue with</span>
                         </div>
                     </div>
 
@@ -142,7 +152,7 @@ const Login = () => {
                         <button
                             type="button"
                             onClick={handleGoogleLogin}
-                            className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+                            className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-sm font-medium text-gray-500 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600"
                         >
                             <svg className="w-5 h-5" viewBox="0 0 24 24">
                                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -155,7 +165,7 @@ const Login = () => {
                         <button
                             type="button"
                             onClick={handleMicrosoftLogin}
-                            className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+                            className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-sm font-medium text-gray-500 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600"
                         >
                             <svg className="w-5 h-5" viewBox="0 0 23 23" fill="none">
                                 <path fill="#F25022" d="M0 0h11v11H0z" />

@@ -32,6 +32,43 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Database health check
+app.get('/health/db', async (req, res) => {
+  try {
+    // Test Prisma connection
+    await prisma.$queryRaw`SELECT 1`;
+    
+    // Get user count
+    const userCount = await prisma.user.count();
+    
+    // Get table information
+    const tables = await prisma.$queryRaw`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+      ORDER BY table_name;
+    `;
+    
+    res.json({
+      status: 'ok',
+      database: 'connected',
+      timestamp: new Date().toISOString(),
+      statistics: {
+        totalUsers: userCount,
+        totalTables: tables.length,
+      },
+      tables: tables.map(t => t.table_name),
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      database: 'disconnected',
+      error: error.message,
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
 // Routes
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';

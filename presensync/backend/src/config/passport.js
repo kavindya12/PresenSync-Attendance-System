@@ -18,14 +18,15 @@ passport.deserializeUser(async (id, done) => {
   }
 });
 
-// Google OAuth Strategy
-passport.use(
-  new GoogleStrategy(
-    {
-      clientID: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: process.env.GOOGLE_CALLBACK_URL,
-    },
+// Google OAuth Strategy (only if credentials are provided)
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  passport.use(
+    new GoogleStrategy(
+      {
+        clientID: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        callbackURL: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:5000/api/auth/google/callback',
+      },
     async (accessToken, refreshToken, profile, done) => {
       try {
         let user = await prisma.user.findFirst({
@@ -69,16 +70,18 @@ passport.use(
     }
   )
 );
+}
 
-// Microsoft OAuth Strategy
-passport.use(
-  new MicrosoftStrategy(
-    {
-      clientID: process.env.MICROSOFT_CLIENT_ID,
-      clientSecret: process.env.MICROSOFT_CLIENT_SECRET,
-      tenant: process.env.MICROSOFT_TENANT_ID || 'common',
-      callbackURL: process.env.MICROSOFT_CALLBACK_URL,
-    },
+// Microsoft OAuth Strategy (only if credentials are provided)
+if (process.env.MICROSOFT_CLIENT_ID && process.env.MICROSOFT_CLIENT_SECRET) {
+  passport.use(
+    new MicrosoftStrategy(
+      {
+        clientID: process.env.MICROSOFT_CLIENT_ID,
+        clientSecret: process.env.MICROSOFT_CLIENT_SECRET,
+        tenant: process.env.MICROSOFT_TENANT_ID || 'common',
+        callbackURL: process.env.MICROSOFT_CALLBACK_URL || 'http://localhost:5000/api/auth/microsoft/callback',
+      },
     async (accessToken, refreshToken, profile, done) => {
       try {
         let user = await prisma.user.findFirst({
@@ -121,6 +124,7 @@ passport.use(
     }
   )
 );
+}
 
 export default passport;
 
