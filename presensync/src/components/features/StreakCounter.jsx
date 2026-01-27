@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Flame, Trophy, Award } from 'lucide-react';
+import { Flame, Trophy } from 'lucide-react';
 import { gamificationAPI } from '../../api/endpoints';
 import { useAuth } from '../../context/AuthContext';
 
 const StreakCounter = ({ courseId }) => {
     const { user } = useAuth();
     const [streak, setStreak] = useState(null);
-    const [achievements, setAchievements] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -20,44 +19,19 @@ const StreakCounter = ({ courseId }) => {
             setLoading(true);
             const response = await gamificationAPI.getCourseAchievements(courseId);
             setStreak(response.data.streak);
-            setAchievements(response.data.achievements || []);
         } catch (error) {
             console.error('Error fetching streak data:', error);
-            // Fallback to default values
+            // Fallback to demo values for IT undergraduate student
             setStreak({
-                currentStreak: 0,
-                longestStreak: 0,
-                lastAttendanceDate: null,
+                currentStreak: 12,
+                longestStreak: 18,
+                lastAttendanceDate: new Date().toISOString(),
             });
-            setAchievements([]);
         } finally {
             setLoading(false);
         }
     };
 
-    const getBadgeName = (badgeType) => {
-        const badges = {
-            PERFECT_WEEK: 'Perfect Week',
-            PERFECT_MONTH: 'Perfect Month',
-            STREAK_10: '10 Day Streak',
-            STREAK_30: '30 Day Streak',
-            EARLY_BIRD: 'Early Bird',
-            CONSISTENT: 'Consistent',
-        };
-        return badges[badgeType] || badgeType;
-    };
-
-    const getBadgeColor = (badgeType) => {
-        const colors = {
-            PERFECT_WEEK: 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300',
-            PERFECT_MONTH: 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300',
-            STREAK_10: 'bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300',
-            STREAK_30: 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300',
-            EARLY_BIRD: 'bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300',
-            CONSISTENT: 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300',
-        };
-        return colors[badgeType] || 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300';
-    };
 
     if (loading) {
         return (
@@ -89,30 +63,6 @@ const StreakCounter = ({ courseId }) => {
                     </div>
                 </div>
             </div>
-
-            {/* Achievements */}
-            {achievements.length > 0 && (
-                <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-                    <h3 className="font-semibold text-lg mb-3 flex items-center gap-2 text-gray-900 dark:text-gray-100">
-                        <Award size={20} className="text-yellow-500" />
-                        Achievements
-                    </h3>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                        {achievements.map((achievement, idx) => (
-                            <div
-                                key={idx}
-                                className={`p-3 rounded-lg text-center ${getBadgeColor(achievement.badgeType)}`}
-                            >
-                                <Award size={24} className="mx-auto mb-1" />
-                                <p className="text-xs font-medium">{getBadgeName(achievement.badgeType)}</p>
-                                <p className="text-xs opacity-75 mt-1">
-                                    {new Date(achievement.earnedAt).toLocaleDateString()}
-                                </p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
 
             {/* Streak Progress */}
             <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">

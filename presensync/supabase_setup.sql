@@ -102,7 +102,11 @@ create table if not exists public.classes (
   start_time timestamp with time zone not null,
   end_time timestamp with time zone not null,
   qr_code_content text,
-  created_at timestamp with time zone default now() not null
+  qr_code_expiry timestamp with time zone,
+  nfc_tag_id text,
+  beacon_id text,
+  created_at timestamp with time zone default now() not null,
+  updated_at timestamp with time zone default now() not null
 );
 
 -- Enable RLS on classes

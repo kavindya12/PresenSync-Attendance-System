@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import QRGenerator from '../../components/features/QRGenerator';
+import QRGenerationModal from '../../components/features/QRGenerationModal';
 import { classAPI, attendanceAPI } from '../../api/endpoints';
 import { format } from 'date-fns';
 import { QrCode, Users, Clock, MapPin } from 'lucide-react';
@@ -11,6 +12,7 @@ const LecturerClasses = () => {
     const [attendance, setAttendance] = useState(null);
     const [loading, setLoading] = useState(true);
     const [qrLoading, setQrLoading] = useState(false);
+    const [showQRModal, setShowQRModal] = useState(false);
 
     useEffect(() => {
         fetchClasses();
@@ -26,13 +28,225 @@ const LecturerClasses = () => {
     const fetchClasses = async () => {
         try {
             setLoading(true);
-            const response = await classAPI.getAllClasses();
-            setClasses(response.data.classes || []);
-            if (response.data.classes?.length > 0) {
-                setSelectedClass(response.data.classes[0]);
+            // Try to fetch from Supabase first
+            const { supabase } = await import('../../lib/supabaseClient');
+            const { data: supabaseClasses, error: supabaseError } = await supabase
+                .from('classes')
+                .select(`
+                    id,
+                    title,
+                    room,
+                    start_time,
+                    end_time,
+                    course_id,
+                    courses (
+                        id,
+                        code,
+                        name,
+                        lecturer_id
+                    )
+                `)
+                .order('start_time', { ascending: false });
+
+            if (!supabaseError && supabaseClasses && supabaseClasses.length > 0) {
+                // Transform Supabase data to match expected format
+                const transformedClasses = supabaseClasses.map(cls => ({
+                    id: cls.id,
+                    course: cls.courses ? {
+                        id: cls.courses.id,
+                        code: cls.courses.code,
+                        name: cls.courses.name
+                    } : null,
+                    title: cls.title,
+                    startTime: cls.start_time,
+                    endTime: cls.end_time,
+                    room: cls.room,
+                    courseId: cls.course_id
+                }));
+                setClasses(transformedClasses);
+                if (transformedClasses.length > 0) {
+                    setSelectedClass(transformedClasses[0]);
+                }
+                setLoading(false);
+                return;
+            }
+
+            // Fallback to API endpoint
+            const response = await classAPI.getAllClasses().catch(() => ({ data: { classes: [] } }));
+            
+            // Comprehensive demo data for IT-related lectures/classes
+            const now = Date.now();
+            const demoClasses = [
+                // Today's Classes
+                {
+                    id: '1',
+                    course: { code: 'CS101', name: 'Introduction to Computer Science' },
+                    title: 'Lecture 12: Object-Oriented Programming Concepts',
+                    startTime: new Date(now + 2 * 60 * 60 * 1000).toISOString(),
+                    endTime: new Date(now + 3.5 * 60 * 60 * 1000).toISOString(),
+                    room: 'IT Building Room 201',
+                    courseId: '1'
+                },
+                {
+                    id: '2',
+                    course: { code: 'CS201', name: 'Data Structures and Algorithms' },
+                    title: 'Lecture 10: Binary Trees and Traversal Algorithms',
+                    startTime: new Date(now + 4 * 60 * 60 * 1000).toISOString(),
+                    endTime: new Date(now + 5.5 * 60 * 60 * 1000).toISOString(),
+                    room: 'IT Building Room 305',
+                    courseId: '2'
+                },
+                {
+                    id: '3',
+                    course: { code: 'CS202', name: 'Object-Oriented Programming' },
+                    title: 'Lab Session 7: Java Collections Framework',
+                    startTime: new Date(now + 6 * 60 * 60 * 1000).toISOString(),
+                    endTime: new Date(now + 7.5 * 60 * 60 * 1000).toISOString(),
+                    room: 'IT Building Lab 203',
+                    courseId: '3'
+                },
+                {
+                    id: '4',
+                    course: { code: 'CS301', name: 'Database Systems' },
+                    title: 'Lab Session 8: SQL Queries and Joins',
+                    startTime: new Date(now + 8 * 60 * 60 * 1000).toISOString(),
+                    endTime: new Date(now + 9.5 * 60 * 60 * 1000).toISOString(),
+                    room: 'IT Building Lab 402',
+                    courseId: '4'
+                },
+                
+                // Tomorrow's Classes
+                {
+                    id: '5',
+                    course: { code: 'CS401', name: 'Software Engineering' },
+                    title: 'Lecture 11: Agile Development Methodologies',
+                    startTime: new Date(now + 24 * 60 * 60 * 1000).toISOString(),
+                    endTime: new Date(now + 25.5 * 60 * 60 * 1000).toISOString(),
+                    room: 'IT Building Room 208',
+                    courseId: '5'
+                },
+                {
+                    id: '6',
+                    course: { code: 'IT301', name: 'Web Development Technologies' },
+                    title: 'Lab Session 9: React.js and State Management',
+                    startTime: new Date(now + 26 * 60 * 60 * 1000).toISOString(),
+                    endTime: new Date(now + 27.5 * 60 * 60 * 1000).toISOString(),
+                    room: 'IT Building Lab 105',
+                    courseId: '6'
+                },
+                {
+                    id: '7',
+                    course: { code: 'CS302', name: 'Operating Systems' },
+                    title: 'Lecture 9: Process Scheduling Algorithms',
+                    startTime: new Date(now + 28 * 60 * 60 * 1000).toISOString(),
+                    endTime: new Date(now + 29.5 * 60 * 60 * 1000).toISOString(),
+                    room: 'IT Building Room 415',
+                    courseId: '7'
+                },
+                {
+                    id: '8',
+                    course: { code: 'CS303', name: 'Computer Networks' },
+                    title: 'Lecture 8: TCP/IP Protocol Suite',
+                    startTime: new Date(now + 30 * 60 * 60 * 1000).toISOString(),
+                    endTime: new Date(now + 31.5 * 60 * 60 * 1000).toISOString(),
+                    room: 'IT Building Room 320',
+                    courseId: '8'
+                },
+                
+                // Day After Tomorrow
+                {
+                    id: '9',
+                    course: { code: 'CS501', name: 'Machine Learning Fundamentals' },
+                    title: 'Lecture 13: Neural Networks and Deep Learning',
+                    startTime: new Date(now + 48 * 60 * 60 * 1000).toISOString(),
+                    endTime: new Date(now + 49.5 * 60 * 60 * 1000).toISOString(),
+                    room: 'IT Building Room 310',
+                    courseId: '9'
+                },
+                {
+                    id: '10',
+                    course: { code: 'CS502', name: 'Artificial Intelligence' },
+                    title: 'Lab Session 10: Implementing Search Algorithms',
+                    startTime: new Date(now + 50 * 60 * 60 * 1000).toISOString(),
+                    endTime: new Date(now + 51.5 * 60 * 60 * 1000).toISOString(),
+                    room: 'IT Building Lab 310',
+                    courseId: '10'
+                },
+                {
+                    id: '11',
+                    course: { code: 'CY301', name: 'Network Security' },
+                    title: 'Lecture 7: Firewall Configuration and Management',
+                    startTime: new Date(now + 52 * 60 * 60 * 1000).toISOString(),
+                    endTime: new Date(now + 53.5 * 60 * 60 * 1000).toISOString(),
+                    room: 'IT Building Room 405',
+                    courseId: '11'
+                },
+                {
+                    id: '12',
+                    course: { code: 'DS301', name: 'Big Data Technologies' },
+                    title: 'Lab Session 6: Hadoop and MapReduce',
+                    startTime: new Date(now + 54 * 60 * 60 * 1000).toISOString(),
+                    endTime: new Date(now + 55.5 * 60 * 60 * 1000).toISOString(),
+                    room: 'IT Building Lab 501',
+                    courseId: '12'
+                },
+                
+                // Additional Classes
+                {
+                    id: '13',
+                    course: { code: 'CS402', name: 'Software Design Patterns' },
+                    title: 'Lecture 10: Creational and Structural Patterns',
+                    startTime: new Date(now + 72 * 60 * 60 * 1000).toISOString(),
+                    endTime: new Date(now + 73.5 * 60 * 60 * 1000).toISOString(),
+                    room: 'IT Building Room 208',
+                    courseId: '13'
+                },
+                {
+                    id: '14',
+                    course: { code: 'IT302', name: 'Mobile Application Development' },
+                    title: 'Lab Session 8: React Native Development',
+                    startTime: new Date(now + 74 * 60 * 60 * 1000).toISOString(),
+                    endTime: new Date(now + 75.5 * 60 * 60 * 1000).toISOString(),
+                    room: 'IT Building Lab 105',
+                    courseId: '14'
+                },
+                {
+                    id: '15',
+                    course: { code: 'CS403', name: 'Distributed Systems' },
+                    title: 'Lecture 9: Microservices Architecture',
+                    startTime: new Date(now + 76 * 60 * 60 * 1000).toISOString(),
+                    endTime: new Date(now + 77.5 * 60 * 60 * 1000).toISOString(),
+                    room: 'IT Building Room 415',
+                    courseId: '15'
+                },
+            ];
+            
+            if (response.data.classes && response.data.classes.length > 0) {
+                setClasses(response.data.classes);
+                if (response.data.classes.length > 0) {
+                    setSelectedClass(response.data.classes[0]);
+                }
+            } else {
+                // Use demo data but show warning
+                console.warn('Using demo classes. QR generation will not work with demo data. Please create classes in the database.');
+                setClasses(demoClasses);
+                setSelectedClass(demoClasses[0]);
             }
         } catch (error) {
             console.error('Error fetching classes:', error);
+            // Use demo data on error
+            const demoClasses = [
+                {
+                    id: '1',
+                    course: { code: 'CS101', name: 'Introduction to Computer Science' },
+                    title: 'Lecture 12: Object-Oriented Programming Concepts',
+                    startTime: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+                    endTime: new Date(Date.now() + 3.5 * 60 * 60 * 1000).toISOString(),
+                    room: 'IT Building Room 201',
+                },
+            ];
+            setClasses(demoClasses);
+            setSelectedClass(demoClasses[0]);
         } finally {
             setLoading(false);
         }
@@ -48,12 +262,25 @@ const LecturerClasses = () => {
         }
     };
 
-    const handleGenerateQR = async () => {
+    const handleGenerateQR = async (qrData) => {
         if (!selectedClass) return;
         try {
             setQrLoading(true);
-            const response = await classAPI.generateQR(selectedClass.id);
-            setSelectedClass({ ...selectedClass, qrCode: response.data.qrCode, qrCodeExpiry: response.data.qrCodeExpiry });
+            
+            // QR data from Edge Function includes qrImage, qrToken, sessionId, expiresAt
+            // Store QR token in the class for reference
+            const qrCodeData = qrData.qrToken || qrData.qrImage; // Use token or image as QR value
+            
+            // Update selected class with QR code data
+            setSelectedClass({
+                ...selectedClass,
+                qrCode: qrCodeData,
+                qrCodeExpiry: qrData.expiresAt,
+                qrImage: qrData.qrImage, // Store the image
+                qrToken: qrData.qrToken, // Store the token
+                sessionId: qrData.sessionId, // Store session ID
+                room: qrData.location,
+            });
         } catch (error) {
             console.error('Error generating QR:', error);
             alert('Failed to generate QR code');
@@ -149,17 +376,33 @@ const LecturerClasses = () => {
 
                             {selectedClass.qrCode ? (
                                 <div className="text-center">
-                                    <QRGenerator value={selectedClass.qrCode} />
+                                    <QRGenerator 
+                                        value={selectedClass.qrCode} 
+                                        qrImage={selectedClass.qrImage}
+                                        qrUrl={selectedClass.qrToken ? `${window.location.origin}/scan?token=${selectedClass.qrToken}` : null}
+                                    />
                                     <p className="text-xs text-gray-500 mt-2">
                                         Expires: {selectedClass.qrCodeExpiry ? format(new Date(selectedClass.qrCodeExpiry), 'hh:mm a') : 'N/A'}
                                     </p>
+                                    {selectedClass.qrToken && (
+                                        <p className="text-xs text-gray-400 mt-1 font-mono">
+                                            Token: {selectedClass.qrToken.substring(0, 8)}...
+                                        </p>
+                                    )}
                                 </div>
                             ) : (
                                 <div className="text-center py-8">
                                     <QrCode className="mx-auto text-gray-400 mb-4" size={48} />
                                     <p className="text-gray-500 mb-4">No QR code generated</p>
+                                    {selectedClass && typeof selectedClass.id === 'string' && selectedClass.id.length < 30 && (
+                                        <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                            <p className="text-xs text-yellow-800">
+                                                ⚠️ Demo class detected. QR generation requires a real class from the database.
+                                            </p>
+                                        </div>
+                                    )}
                                     <button
-                                        onClick={handleGenerateQR}
+                                        onClick={() => setShowQRModal(true)}
                                         disabled={qrLoading}
                                         className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50"
                                     >
@@ -211,10 +454,10 @@ const LecturerClasses = () => {
 
                             <div className="mt-6 flex justify-center space-x-4">
                                 <button
-                                    onClick={handleGenerateQR}
+                                    onClick={() => setShowQRModal(true)}
                                     className="px-4 py-2 border border-orange-200 text-orange-600 rounded hover:bg-orange-50"
                                 >
-                                    Refresh QR
+                                    {selectedClass.qrCode ? 'Regenerate QR' : 'Generate QR'}
                                 </button>
                                 <button
                                     onClick={fetchClassAttendance}
@@ -231,6 +474,16 @@ const LecturerClasses = () => {
                     )}
                 </div>
             </div>
+
+            {/* QR Generation Modal */}
+            <QRGenerationModal
+                isOpen={showQRModal}
+                onClose={() => setShowQRModal(false)}
+                onGenerate={handleGenerateQR}
+                course={selectedClass?.course}
+                classData={selectedClass}
+                classId={selectedClass?.id}
+            />
         </div>
     );
 };
