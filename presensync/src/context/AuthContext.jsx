@@ -73,8 +73,6 @@ export const AuthProvider = ({ children }) => {
         }, 5000);
 
         getSession();
-        
-        return () => clearTimeout(timeout);
 
         // Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -131,7 +129,10 @@ export const AuthProvider = ({ children }) => {
             setLoading(false);
         });
 
-        return () => subscription.unsubscribe();
+        return () => {
+            clearTimeout(timeout);
+            subscription.unsubscribe();
+        };
     }, []);
 
     const signIn = async (email, password) => {
@@ -183,6 +184,8 @@ export const AuthProvider = ({ children }) => {
 
     const signOut = async () => {
         try {
+            disconnectSocket();
+            setUser(null);
             await supabase.auth.signOut();
         } catch (error) {
             console.error('Logout error:', error);
