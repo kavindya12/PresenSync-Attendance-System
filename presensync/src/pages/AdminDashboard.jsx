@@ -37,6 +37,13 @@ const AdminDashboard = () => {
             });
         } catch (error) {
             console.error('Error fetching stats:', error);
+            // Use default stats if API fails
+            setStats({
+                totalUsers: 0,
+                totalCourses: 0,
+                totalClasses: 0,
+                attendanceRate: 0,
+            });
         } finally {
             setLoading(false);
         }
@@ -48,11 +55,11 @@ const AdminDashboard = () => {
     };
 
     const navItems = [
-        { path: '/admin', icon: <LayoutDashboard size={20} />, label: 'Dashboard', end: true },
-        { path: '/admin/users', icon: <Users size={20} />, label: 'Users' },
-        { path: '/admin/courses', icon: <BookOpen size={20} />, label: 'Courses' },
-        { path: '/admin/reports', icon: <BarChart2 size={20} />, label: 'Reports' },
-        { path: '/admin/settings', icon: <Settings size={20} />, label: 'Settings' },
+        { path: '.', icon: <LayoutDashboard size={20} />, label: 'Dashboard', end: true },
+        { path: 'users', icon: <Users size={20} />, label: 'Users' },
+        { path: 'courses', icon: <BookOpen size={20} />, label: 'Courses' },
+        { path: 'reports', icon: <BarChart2 size={20} />, label: 'Reports' },
+        { path: 'settings', icon: <Settings size={20} />, label: 'Settings' },
     ];
 
     return (
@@ -112,9 +119,7 @@ const AdminDashboard = () => {
             {/* Main Content */}
             <main className="flex-1 md:ml-64 p-4 md:p-8 pt-20 md:pt-8 bg-gray-50 dark:bg-gray-900">
                 <Routes>
-                    <Route
-                        path="/"
-                        element={
+                    <Route index element={
                             <div className="space-y-6">
                                 <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Admin Dashboard</h2>
                                 {loading ? (
@@ -147,28 +152,28 @@ const AdminDashboard = () => {
                                     <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100 mb-4">Quick Actions</h3>
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                         <NavLink
-                                            to="/admin/users"
+                                            to="users"
                                             className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 text-center"
                                         >
                                             <Users className="mx-auto mb-2 text-gray-600 dark:text-gray-400" size={24} />
                                             <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Manage Users</p>
                                         </NavLink>
                                         <NavLink
-                                            to="/admin/courses"
+                                            to="courses"
                                             className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 text-center"
                                         >
                                             <BookOpen className="mx-auto mb-2 text-gray-600 dark:text-gray-400" size={24} />
                                             <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Manage Courses</p>
                                         </NavLink>
                                         <NavLink
-                                            to="/admin/reports"
+                                            to="reports"
                                             className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 text-center"
                                         >
                                             <BarChart2 className="mx-auto mb-2 text-gray-600 dark:text-gray-400" size={24} />
                                             <p className="text-sm font-medium text-gray-900 dark:text-gray-100">View Reports</p>
                                         </NavLink>
                                         <NavLink
-                                            to="/admin/settings"
+                                            to="settings"
                                             className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 text-center"
                                         >
                                             <Settings className="mx-auto mb-2 text-gray-600 dark:text-gray-400" size={24} />
@@ -179,10 +184,10 @@ const AdminDashboard = () => {
                             </div>
                         }
                     />
-                    <Route path="/users" element={<div className="text-center py-20 text-gray-500 dark:text-gray-400">User Management Coming Soon</div>} />
-                    <Route path="/courses" element={<div className="text-center py-20 text-gray-500 dark:text-gray-400">Course Management Coming Soon</div>} />
-                    <Route path="/reports" element={<div className="text-center py-20 text-gray-500 dark:text-gray-400">Reports Coming Soon</div>} />
-                    <Route path="/settings" element={<div className="text-center py-20 text-gray-500 dark:text-gray-400">Settings Coming Soon</div>} />
+                    <Route path="users" element={<div className="text-center py-20 text-gray-500 dark:text-gray-400">User Management Coming Soon</div>} />
+                    <Route path="courses" element={<div className="text-center py-20 text-gray-500 dark:text-gray-400">Course Management Coming Soon</div>} />
+                    <Route path="reports" element={<div className="text-center py-20 text-gray-500 dark:text-gray-400">Reports Coming Soon</div>} />
+                    <Route path="settings" element={<div className="text-center py-20 text-gray-500 dark:text-gray-400">Settings Coming Soon</div>} />
                 </Routes>
             </main>
         </div>

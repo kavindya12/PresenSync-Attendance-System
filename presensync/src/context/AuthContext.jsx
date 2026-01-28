@@ -67,7 +67,14 @@ export const AuthProvider = ({ children }) => {
             }
         };
 
+        // Add timeout to prevent infinite loading
+        const timeout = setTimeout(() => {
+            setLoading(false);
+        }, 5000);
+
         getSession();
+        
+        return () => clearTimeout(timeout);
 
         // Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
