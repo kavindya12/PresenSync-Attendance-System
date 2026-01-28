@@ -9,20 +9,25 @@ const Landing = () => {
     // Redirect authenticated users to their dashboard
     useEffect(() => {
         if (!loading && user && user.role) {
-            const role = user.role.toLowerCase();
+            const role = String(user.role).toLowerCase().trim();
+            console.log('Landing useEffect: redirecting user with role:', role);
+            
             switch (role) {
                 case 'student':
+                    console.log('Landing: Redirecting to /student');
                     navigate('/student', { replace: true });
                     break;
                 case 'lecturer':
+                    console.log('Landing: Redirecting to /lecturer');
                     navigate('/lecturer', { replace: true });
                     break;
                 case 'admin':
                 case 'dept_head':
+                    console.log('Landing: Redirecting to /admin');
                     navigate('/admin', { replace: true });
                     break;
                 default:
-                    // Stay on landing page if role is unknown
+                    console.log('Landing: Unknown role, staying on landing');
                     break;
             }
         }

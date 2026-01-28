@@ -48,20 +48,26 @@ const Login = () => {
     }, [user, searchParams]);
 
     const redirectByRole = (role) => {
-        const standardRole = role?.toLowerCase();
+        const standardRole = String(role).toLowerCase().trim();
+        console.log('Login redirectByRole called with role:', role, 'standardRole:', standardRole);
+        
         switch (standardRole) {
             case 'student':
-                navigate('/student');
+                console.log('Redirecting to /student');
+                navigate('/student', { replace: true });
                 break;
             case 'lecturer':
-                navigate('/lecturer');
+                console.log('Redirecting to /lecturer');
+                navigate('/lecturer', { replace: true });
                 break;
             case 'admin':
             case 'dept_head':
-                navigate('/admin');
+                console.log('Redirecting to /admin');
+                navigate('/admin', { replace: true });
                 break;
             default:
-                navigate('/');
+                console.log('Unknown role, redirecting to /');
+                navigate('/', { replace: true });
         }
     };
 
