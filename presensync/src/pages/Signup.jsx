@@ -15,37 +15,20 @@ const Signup = () => {
     const navigate = useNavigate();
 
     const redirectByRole = (role) => {
-        if (!role) {
-            console.warn('Signup - No role provided for redirect');
-            navigate('/');
-            return;
-        }
-        
-        // Normalize role - handle various formats
-        const roleStr = String(role || '').toLowerCase().trim();
-        console.log('Signup - Redirecting by role:', roleStr, 'from original:', role);
-        
-        // Check for admin roles (handle various formats)
-        if (roleStr === 'admin' || roleStr === 'dept_head' || roleStr === 'depthead' || 
-            roleStr === 'administrator' || roleStr === 'dept head') {
-            console.log('Signup - Redirecting admin to /admin');
-            navigate('/admin', { replace: true });
-            return;
-        }
-        
-        switch (roleStr) {
+        const standardRole = role?.toLowerCase();
+        switch (standardRole) {
             case 'student':
-                console.log('Signup - Redirecting student to /student');
-                navigate('/student', { replace: true });
+                navigate('/student');
                 break;
             case 'lecturer':
-            case 'teacher':
-                console.log('Signup - Redirecting lecturer to /lecturer');
-                navigate('/lecturer', { replace: true });
+                navigate('/lecturer');
+                break;
+            case 'admin':
+            case 'dept_head':
+                navigate('/admin');
                 break;
             default:
-                console.warn('Signup - Unknown role:', roleStr, '- redirecting to home');
-                navigate('/', { replace: true });
+                navigate('/');
         }
     };
 
@@ -63,7 +46,7 @@ const Signup = () => {
                 return () => clearTimeout(timer);
             }
         }
-    }, [user, navigate]);
+    }, [user]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -76,19 +59,10 @@ const Signup = () => {
                 ...(role === 'student' && studentId && { studentId }),
                 ...(department && { department }),
             };
-            const { error, data } = await signUp(email, password, metadata);
+            const { error } = await signUp(email, password, metadata);
             if (error) throw new Error(error.message);
-            
-            // If user is immediately available (email confirmation disabled), redirect
-            if (data?.user) {
-                // Wait a bit for profile to be created by trigger
-                setTimeout(() => {
-                    if (data.user.user_metadata?.role) {
-                        redirectByRole(data.user.user_metadata.role);
-                    }
-                }, 500);
-            }
-            // Otherwise, the useEffect will handle redirect when user is loaded
+            // User profile will be loaded by AuthContext's onAuthStateChange
+            // The useEffect above will handle redirect when user is loaded
         } catch (err) {
             setError(err.message || 'Signup failed');
             setLoading(false);

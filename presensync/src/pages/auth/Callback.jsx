@@ -29,22 +29,21 @@ const Callback = () => {
                     updateUser(response.data.user);
                     initializeSocket();
                     
-                    // Redirect based on role (handle both uppercase and lowercase)
-                    const roleStr = String(response.data.user.role || '').toLowerCase().trim();
-                    console.log('Callback - Redirecting by role:', roleStr);
-                    
-                    // Check for admin roles (handle various formats)
-                    if (roleStr === 'admin' || roleStr === 'dept_head' || roleStr === 'depthead' || 
-                        roleStr === 'administrator' || roleStr === 'dept head') {
-                        console.log('Callback - Redirecting admin to /admin');
-                        navigate('/admin', { replace: true });
-                    } else if (roleStr === 'student') {
-                        navigate('/student', { replace: true });
-                    } else if (roleStr === 'lecturer' || roleStr === 'teacher') {
-                        navigate('/lecturer', { replace: true });
-                    } else {
-                        console.warn('Callback - Unknown role, redirecting to home');
-                        navigate('/', { replace: true });
+                    // Redirect based on role
+                    const role = response.data.user.role;
+                    switch (role) {
+                        case 'STUDENT':
+                            navigate('/student');
+                            break;
+                        case 'LECTURER':
+                            navigate('/lecturer');
+                            break;
+                        case 'ADMIN':
+                        case 'DEPT_HEAD':
+                            navigate('/admin');
+                            break;
+                        default:
+                            navigate('/');
                     }
                 })
                 .catch(() => {

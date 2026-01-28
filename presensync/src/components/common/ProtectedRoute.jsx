@@ -5,7 +5,6 @@ import { useAuth } from '../../context/AuthContext';
 const ProtectedRoute = ({ children, allowedRoles }) => {
     const { user, loading } = useAuth();
 
-    // Check loading
     if (loading) {
         return (
             <div className="flex justify-center items-center h-screen">
@@ -14,48 +13,21 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
         );
     }
 
-    // Normal authentication flow
     if (!user) {
         return <Navigate to="/login" replace />;
     }
 
-    // Check email as fallback for admin detection
-    const email = user.email?.toLowerCase() || '';
-    let userRole = String(user.role || '').toLowerCase().trim();
-    
-    // If no role or role is student, but email is admin, force admin role
-    if ((!userRole || userRole === 'student') && (email.includes('admin') || email === 'admin@gmail.com')) {
-        userRole = 'admin';
-        console.log('ProtectedRoute - Forcing admin role based on email:', email);
-    }
-    
-    const normalizedAllowedRoles = allowedRoles?.map(r => String(r || '').toLowerCase().trim());
+    const userRole = user.role?.toLowerCase();
+    const normalizedAllowedRoles = allowedRoles?.map(r => r.toLowerCase());
 
-    console.log('ProtectedRoute - User role:', userRole, 'Email:', email, 'Allowed roles:', normalizedAllowedRoles);
-
-    // Check if user has access to this route
     if (normalizedAllowedRoles && !normalizedAllowedRoles.includes(userRole)) {
-        console.log('ProtectedRoute - Access denied, redirecting based on role:', userRole);
-        // User doesn't have access - redirect to their appropriate dashboard based on their actual role
-        if (userRole === 'student') {
-            return <Navigate to="/student" replace />;
-        }
-        if (userRole === 'lecturer' || userRole === 'teacher') {
-            return <Navigate to="/lecturer" replace />;
-        }
-        if (userRole === 'admin' || userRole === 'dept_head' || userRole === 'depthead' || 
-            userRole === 'administrator' || userRole === 'dept head') {
-            console.log('ProtectedRoute - Redirecting admin user to /admin');
-            return <Navigate to="/admin" replace />;
-        }
-        // Unknown role - go to landing page
-        console.warn('ProtectedRoute - Unknown role, redirecting to home');
+        // Redirect based on actual role
+        if (userRole === 'student') return <Navigate to="/student" replace />;
+        if (userRole === 'lecturer') return <Navigate to="/lecturer" replace />;
+        if (userRole === 'admin' || userRole === 'dept_head') return <Navigate to="/admin" replace />;
         return <Navigate to="/" replace />;
     }
 
-    // User has correct role for this route - allow access
-
-    // User has access - allow them to view the dashboard
     return children;
 };
 

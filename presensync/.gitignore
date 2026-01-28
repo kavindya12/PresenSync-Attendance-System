@@ -7,57 +7,10 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Dependencies
 node_modules
 dist
 dist-ssr
 *.local
-
-# Environment variables (SENSITIVE - DO NOT COMMIT)
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-.env.*.local
-.env.*
-!.env.example
-backend/.env
-backend/.env.local
-backend/.env.*
-!backend/.env.example
-
-# Database files (SENSITIVE)
-*.db
-*.sqlite
-*.sqlite3
-*.db-journal
-*.db-wal
-*.db-shm
-prisma/migrations/*.sql
-!prisma/migrations/migration_lock.toml
-
-# Prisma generated files
-backend/.prisma/
-backend/prisma/migrations/
-
-# Secrets and credentials (SENSITIVE)
-secrets/
-*.pem
-*.key
-*.cert
-*.crt
-*.p12
-*.pfx
-credentials.json
-service-account*.json
-*-credentials.json
-
-# API keys and tokens (SENSITIVE)
-*.api-key
-*.secret
-config.local.*
-secrets.local.*
 
 # Editor directories and files
 .vscode/*
@@ -69,42 +22,3 @@ secrets.local.*
 *.njsproj
 *.sln
 *.sw?
-
-# OS files
-Thumbs.db
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-
-# Build outputs
-build/
-*.tsbuildinfo
-out/
-.next/
-.nuxt/
-.cache/
-
-# Temporary files
-*.tmp
-*.temp
-.cache/
-.temp/
-tmp/
-temp/
-
-# Testing
-coverage/
-.nyc_output/
-*.lcov
-
-# Supabase
-.supabase/
-supabase/.env
-supabase/.env.local
-
-# Backup files
-*.bak
-*.backup
-*~

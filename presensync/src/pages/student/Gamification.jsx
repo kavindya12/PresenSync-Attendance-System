@@ -40,46 +40,7 @@ const Gamification = () => {
             setAllAchievements(response.data.achievements || []);
         } catch (error) {
             console.error('Error fetching achievements:', error);
-            // Use demo data if API fails
-            const demoAchievements = [
-                {
-                    id: '1',
-                    badgeType: 'STREAK_10',
-                    courseName: 'CS101 - Introduction to Computer Science',
-                    earnedAt: '2024-11-15T10:00:00'
-                },
-                {
-                    id: '2',
-                    badgeType: 'PERFECT_WEEK',
-                    courseName: 'CS201 - Data Structures and Algorithms',
-                    earnedAt: '2024-11-20T14:00:00'
-                },
-                {
-                    id: '3',
-                    badgeType: 'EARLY_BIRD',
-                    courseName: 'CS301 - Database Systems',
-                    earnedAt: '2024-11-25T09:00:00'
-                },
-                {
-                    id: '4',
-                    badgeType: 'STREAK_30',
-                    courseName: 'CS401 - Software Engineering',
-                    earnedAt: '2024-12-01T11:00:00'
-                },
-                {
-                    id: '5',
-                    badgeType: 'PERFECT_MONTH',
-                    courseName: 'IT301 - Web Development Technologies',
-                    earnedAt: '2024-12-05T13:00:00'
-                },
-                {
-                    id: '6',
-                    badgeType: 'CONSISTENT',
-                    courseName: 'CS501 - Machine Learning Fundamentals',
-                    earnedAt: '2024-12-10T15:00:00'
-                }
-            ];
-            setAllAchievements(demoAchievements);
+            setAllAchievements([]);
         }
     };
 

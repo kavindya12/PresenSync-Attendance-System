@@ -27,77 +27,33 @@ const StudentOverview = () => {
             const tomorrow = new Date(today);
             tomorrow.setDate(tomorrow.getDate() + 1);
 
-            // Demo data for IT undergraduate student
-            const demoStats = {
-                attendancePercentage: 91.5,
-                enrolledCourses: 6,
-                classesToday: 3,
-            };
+            // Fetch courses
+            const coursesRes = await courseAPI.getAllCourses();
+            const courses = coursesRes.data.courses || [];
+            setStats(prev => ({ ...prev, enrolledCourses: courses.length }));
 
-            const demoTodayClasses = [
-                {
-                    id: '1',
-                    course: { code: 'CS101', name: 'Introduction to Computer Science' },
-                    title: 'Lecture 12: Object-Oriented Programming Concepts',
-                    startTime: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
-                    endTime: new Date(Date.now() + 3.5 * 60 * 60 * 1000).toISOString(),
-                    room: 'IT Building Room 201',
-                },
-                {
-                    id: '2',
-                    course: { code: 'CS201', name: 'Data Structures and Algorithms' },
-                    title: 'Lecture 10: Binary Trees and Traversal',
-                    startTime: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(),
-                    endTime: new Date(Date.now() + 5.5 * 60 * 60 * 1000).toISOString(),
-                    room: 'IT Building Room 305',
-                },
-                {
-                    id: '3',
-                    course: { code: 'CS202', name: 'Object-Oriented Programming' },
-                    title: 'Lab Session 7: Java Collections Framework',
-                    startTime: new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString(),
-                    endTime: new Date(Date.now() + 7.5 * 60 * 60 * 1000).toISOString(),
-                    room: 'IT Building Lab 203',
-                },
-            ];
+            // Fetch today's classes
+            const classesRes = await classAPI.getAllClasses({
+                startDate: today.toISOString(),
+                endDate: tomorrow.toISOString(),
+            });
+            const classes = classesRes.data.classes || [];
+            setStats(prev => ({ ...prev, classesToday: classes.length }));
+            setTodayClasses(classes);
 
-            try {
-                // Fetch courses
-                const coursesRes = await courseAPI.getAllCourses().catch(() => ({ data: { courses: [] } }));
-                const courses = coursesRes.data.courses || [];
-                setStats(prev => ({ ...prev, enrolledCourses: courses.length || demoStats.enrolledCourses }));
-
-                // Fetch today's classes
-                const classesRes = await classAPI.getAllClasses({
-                    startDate: today.toISOString(),
-                    endDate: tomorrow.toISOString(),
-                }).catch(() => ({ data: { classes: [] } }));
-                const classes = classesRes.data.classes || [];
-                setStats(prev => ({ ...prev, classesToday: classes.length || demoStats.classesToday }));
-                
-                if (classes.length > 0) {
-                    setTodayClasses(classes);
-                } else {
-                    setTodayClasses(demoTodayClasses);
-                }
-
-                // Fetch attendance stats
+            // Fetch attendance stats
+            if (courses.length > 0) {
                 const statsRes = await attendanceAPI.getAttendanceStats({
                     startDate: new Date(new Date().getFullYear(), 0, 1).toISOString(),
-                }).catch(() => ({ data: { stats: {} } }));
+                });
                 const statsData = statsRes.data.stats || {};
                 setStats(prev => ({
                     ...prev,
-                    attendancePercentage: parseFloat(statsData.percentage || demoStats.attendancePercentage),
+                    attendancePercentage: parseFloat(statsData.percentage || 0),
                 }));
-            } catch (error) {
-                console.error('Error fetching dashboard data:', error);
-                // Use demo data on error
-                setStats(demoStats);
-                setTodayClasses(demoTodayClasses);
             }
         } catch (error) {
-            console.error('Error:', error);
+            console.error('Error fetching dashboard data:', error);
         } finally {
             setLoading(false);
         }

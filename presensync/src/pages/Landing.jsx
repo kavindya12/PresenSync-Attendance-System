@@ -28,14 +28,11 @@ const Landing = () => {
         }
     }, [user, loading, navigate]);
 
-    // Show loading while checking auth (non-blocking - show content immediately)
+    // Show loading while checking auth
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-teal-50 to-orange-50">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto mb-4"></div>
-                    <p className="text-gray-600">Loading...</p>
-                </div>
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
             </div>
         );
     }

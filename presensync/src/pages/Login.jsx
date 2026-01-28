@@ -33,66 +33,35 @@ const Login = () => {
 
     // Redirect after successful login when user profile is loaded
     useEffect(() => {
-        if (user) {
+        if (user && user.role) {
             const currentPath = window.location.pathname;
             // Only redirect if we're on login or landing page and not already redirecting
             if ((currentPath === '/login' || currentPath === '/') && !searchParams.get('token')) {
-                // Check email as fallback for admin detection
-                const email = user.email?.toLowerCase() || '';
-                let role = user.role;
-                
-                // If no role or role is student, but email is admin, force admin role
-                if ((!role || role === 'student') && (email.includes('admin') || email === 'admin@gmail.com')) {
-                    role = 'admin';
-                    console.log('Login - Forcing admin role based on email:', email);
-                }
-                
-                if (role) {
-                    // Small delay to ensure user state is fully set
-                    const timer = setTimeout(() => {
-                        console.log('Login redirect - User object:', user);
-                        console.log('Login redirect - User role:', role, 'Email:', email);
-                        console.log('Login redirect - Full user:', JSON.stringify(user, null, 2));
-                        redirectByRole(role);
-                    }, 200);
-                    return () => clearTimeout(timer);
-                }
+                // Small delay to ensure user state is fully set
+                const timer = setTimeout(() => {
+                    console.log('Redirecting user with role:', user.role);
+                    redirectByRole(user.role);
+                }, 100);
+                return () => clearTimeout(timer);
             }
         }
     }, [user, searchParams]);
 
     const redirectByRole = (role) => {
-        if (!role) {
-            console.warn('No role provided for redirect');
-            navigate('/');
-            return;
-        }
-        
-        // Normalize role - handle various formats
-        const roleStr = String(role || '').toLowerCase().trim();
-        console.log('Redirecting by role:', roleStr, 'from original:', role);
-        
-        // Check for admin roles (handle various formats)
-        if (roleStr === 'admin' || roleStr === 'dept_head' || roleStr === 'depthead' || 
-            roleStr === 'administrator' || roleStr === 'dept head') {
-            console.log('Redirecting admin to /admin');
-            navigate('/admin', { replace: true });
-            return;
-        }
-        
-        switch (roleStr) {
+        const standardRole = role?.toLowerCase();
+        switch (standardRole) {
             case 'student':
-                console.log('Redirecting student to /student');
-                navigate('/student', { replace: true });
+                navigate('/student');
                 break;
             case 'lecturer':
-            case 'teacher':
-                console.log('Redirecting lecturer to /lecturer');
-                navigate('/lecturer', { replace: true });
+                navigate('/lecturer');
+                break;
+            case 'admin':
+            case 'dept_head':
+                navigate('/admin');
                 break;
             default:
-                console.warn('Unknown role:', roleStr, '- redirecting to home');
-                navigate('/', { replace: true });
+                navigate('/');
         }
     };
 

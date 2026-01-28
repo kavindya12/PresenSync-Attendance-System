@@ -1,64 +1,8 @@
-# Dependencies
 node_modules/
-package-lock.json
-yarn.lock
-pnpm-lock.yaml
-
-# Environment variables (SENSITIVE - DO NOT COMMIT)
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-.env.*.local
-.env.*
-!.env.example
-
-# Database files (SENSITIVE)
-*.db
-*.sqlite
-*.sqlite3
-*.db-journal
-*.db-wal
-*.db-shm
-
-# Prisma
-.prisma/
-prisma/migrations/*.sql
-!prisma/migrations/migration_lock.toml
-
-# Logs
+.DS_Store
 *.log
-logs/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Build outputs
 dist/
 build/
-out/
-
-# OS files
-.DS_Store
-Thumbs.db
-*.swp
-*.swo
-*~
-
-# Secrets and credentials (SENSITIVE)
-*.pem
-*.key
-*.cert
-*.crt
-secrets/
-credentials.json
-service-account*.json
-
-# Temporary files
-*.tmp
-*.temp
-.cache/
-tmp/
-temp/
+.prisma/
 

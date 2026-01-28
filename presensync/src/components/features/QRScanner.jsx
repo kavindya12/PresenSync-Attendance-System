@@ -1,25 +1,12 @@
 import React, { useState } from 'react';
 import { QrReader } from 'react-qr-reader';
-import { scanQRAndMarkAttendance } from '../../api/supabaseFunctions';
+import { attendanceAPI } from '../../api/endpoints';
 import { getSocket } from '../../utils/socket';
 
 const QRScanner = ({ onSuccess, onError }) => {
     const [data, setData] = useState('');
     const [scanning, setScanning] = useState(true);
     const [loading, setLoading] = useState(false);
-
-    const extractTokenFromQR = (qrText) => {
-        // QR code can be:
-        // 1. URL with token: https://yourapp.com/scan?token=xxx
-        // 2. Direct token: xxx-xxx-xxx
-        try {
-            const url = new URL(qrText);
-            return url.searchParams.get('token') || qrText;
-        } catch {
-            // Not a URL, assume it's a direct token
-            return qrText;
-        }
-    };
 
     const handleResult = async (result, error) => {
         if (!!result && result.text && scanning && !loading) {
@@ -28,41 +15,31 @@ const QRScanner = ({ onSuccess, onError }) => {
             setData(result.text);
 
             try {
-                // Extract token from QR code
-                const token = extractTokenFromQR(result.text);
-                
-                // Validate token and mark attendance using Supabase Edge Functions
-                const scanResult = await scanQRAndMarkAttendance(token);
+                const response = await attendanceAPI.markAttendance({
+                    method: 'QR',
+                    data: result.text,
+                });
 
-                if (scanResult.success) {
-                    if (onSuccess) {
-                        onSuccess({
-                            ...scanResult.attendance,
-                            session: scanResult.session,
-                            status: 'PRESENT',
-                        });
-                    }
-
-                    // Emit socket event
-                    const socket = getSocket();
-                    if (socket && scanResult.session) {
-                        socket.emit('attendance:marked', {
-                            classId: scanResult.session.class_id,
-                            sessionId: scanResult.session.session_id,
-                        });
-                    }
-
-                    // Reset after 2 seconds
-                    setTimeout(() => {
-                        setScanning(true);
-                        setData('');
-                        setLoading(false);
-                    }, 2000);
-                } else {
-                    throw new Error(scanResult.error || 'Failed to mark attendance');
+                if (onSuccess) {
+                    onSuccess(response.data.attendanceRecord);
                 }
+
+                // Emit socket event
+                const socket = getSocket();
+                if (socket) {
+                    socket.emit('attendance:marked', {
+                        classId: response.data.attendanceRecord.classId,
+                    });
+                }
+
+                // Reset after 2 seconds
+                setTimeout(() => {
+                    setScanning(true);
+                    setData('');
+                    setLoading(false);
+                }, 2000);
             } catch (err) {
-                const errorMessage = err.message || err.response?.data?.error || 'Failed to mark attendance';
+                const errorMessage = err.response?.data?.error || 'Failed to mark attendance';
                 if (onError) {
                     onError(errorMessage);
                 }
